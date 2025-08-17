@@ -1,9 +1,9 @@
 {
     "id": "meeting-bot-session",
     "use_my_vocabulary": false,
-    "meeting_url": "https://meet.google.com/bfe-bdys-ads?authuser=0",
+    "meeting_url": "https://meet.google.com/yzr-qaki-vyh?authuser=0",
     "user_token": "dummy-token-for-production",
-    "bot_name": "Recording Bot",
+    "bot_name": "VINI_BOT",
     "user_id": 123,
     "session_id": "production-session",
     "email": "bot@example.com",
@@ -15,9 +15,9 @@
     "streaming_output": "",
     "streaming_audio_frequency": 24000,
     "bots_api_key": "your-api-key-here",
-    "bots_webhook_url": "",
+    "bots_webhook_url": "https://tasteless-family-80.webhook.cool",
     "bot_uuid": "unique-bot-identifier",
-    "enter_message": "Recording bot has joined the meeting",
+    "enter_message": "Teste Bot na Call",
     "recording_mode": "speaker_view",
     "local_recording_server_location": "docker",
     "automatic_leave": {
@@ -27,7 +27,10 @@
     "mp4_s3_path": "recordings/output.mp4",
     "custom_branding_bot_path": "https://i.ibb.co/N9YtnDZ/ducobu.jpg",
     "environ": "local",
-    "aws_s3_temporary_audio_bucket": "local-audio-bucket",
-    "remote": null,
+    "aws_s3_temporary_audio_bucket": "meeting-baas-dev",
+    "remote": {
+      "aws_s3_video_bucket": "meeting-baas-dev",
+      "aws_s3_log_bucket": "meeting-baas-dev"
+    },
     "secret": "your-secret-key"
 }

@@ -145,7 +145,7 @@ export class Api {
 
     // Handle end meeting with retry logic
     public async handleEndMeetingWithRetry(): Promise<void> {
-        if (GLOBAL.isServerless()) {
+        if (GLOBAL.isServerless() || !process.env.API_SERVER_BASEURL) {
             console.log('Skipping endMeetingTrampoline - serverless mode')
             return
         }
