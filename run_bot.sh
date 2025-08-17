@@ -135,6 +135,23 @@ process_config() {
     local bot_uuid
     bot_uuid=$(generate_uuid)
     print_info "${ICON_BOT} Generated bot session ID: ${bot_uuid:0:8}..."
+
+    # 1º: Ler o arquivo .env e atualizar BOT_ID com o valor de bot_uuid
+    if [ -f ".env" ]; then
+        print_info "📝 Updating .env file with BOT_ID=$bot_uuid"
+        if grep -q "^BOT_ID=" .env; then
+            # Se BOT_ID já existe, atualizar o valor
+            sed -i "s/^BOT_ID=.*/BOT_ID=$bot_uuid/" .env
+        else
+            # Se BOT_ID não existe, adicionar ao final do arquivo
+            echo "BOT_ID=$bot_uuid" >> .env
+        fi
+    else
+        print_warning "⚠️  .env file not found, creating with BOT_ID=$bot_uuid"
+        echo "BOT_ID=$bot_uuid" > .env
+    fi
+
+    # 2º: Processar o config_json para adicionar bot_uuid
     if command -v jq &> /dev/null; then
         echo "$config_json" | jq --arg bot_uuid "$bot_uuid" '.bot_uuid = $bot_uuid'
     else
