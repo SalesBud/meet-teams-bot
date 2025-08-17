@@ -623,7 +623,7 @@ export class ScreenRecorder extends EventEmitter {
                         GLOBAL.get().aws_s3_temporary_audio_bucket,
                         s3Key,
                         [],
-                        true,
+                        true
                     )
 
                     console.log(`✅ Chunk uploaded: ${filename}`)
@@ -652,6 +652,8 @@ export class ScreenRecorder extends EventEmitter {
                     this.audioOutputPath,
                     GLOBAL.get().remote?.aws_s3_video_bucket!,
                     `${identifier}.wav`,
+                    [],
+                    true
                 )
                 fs.unlinkSync(this.audioOutputPath)
             }
@@ -669,6 +671,8 @@ export class ScreenRecorder extends EventEmitter {
                     this.outputPath,
                     GLOBAL.get().remote?.aws_s3_video_bucket!,
                     `${identifier}.mp4`,
+                    [],
+                    false
                 )
                 fs.unlinkSync(this.outputPath)
             }
@@ -782,7 +786,7 @@ export class ScreenRecorder extends EventEmitter {
                     if (
                         GLOBAL.hasError() &&
                         GLOBAL.getEndReason() ===
-                            MeetingEndReason.BotNotAccepted
+                        MeetingEndReason.BotNotAccepted
                     ) {
                         console.log(
                             'Preserving existing BotNotAccepted error instead of creating BotRemovedTooEarly',
@@ -880,7 +884,7 @@ export class ScreenRecorder extends EventEmitter {
             (this.meetingStartTime -
                 this.recordingStartTime -
                 FLASH_SCREEN_SLEEP_TIME) /
-                1000
+            1000
 
         console.log(`📊 Debug values:`)
         console.log(

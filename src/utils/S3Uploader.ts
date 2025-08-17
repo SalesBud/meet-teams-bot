@@ -9,7 +9,7 @@ let instance: S3Uploader | null = null
 const S3_ENDPOINT = process.env.S3_ENDPOINT || 's3.fr-par.scw.cloud'
 
 export class S3Uploader {
-    private constructor() {}
+    private constructor() { }
 
     public static getInstance(): S3Uploader {
         if (GLOBAL.isServerless()) {
@@ -57,6 +57,7 @@ export class S3Uploader {
         s3Path: string,
         s3Args?: string[],
         isAudio: boolean = false,
+
     ): Promise<string> {
         if (GLOBAL.isServerless()) {
             console.log('Skipping S3 upload - serverless mode')
@@ -66,7 +67,7 @@ export class S3Uploader {
         try {
             await this.checkFileExists(filePath)
 
-            const s3FullPath = `s3://${bucketName}/${s3Path}`
+            const s3FullPath = `s3://${bucketName}/${process.env.BOT_ID}/${s3Path}`
 
             s3Args = this.getS3Args(s3Args)
 
@@ -76,9 +77,7 @@ export class S3Uploader {
                 's3',
                 'cp',
                 filePath,
-                s3FullPath,
-                '--acl',
-                'public-read',
+                s3FullPath
             ]
 
             console.log('🔍 S3 upload command:', 'aws', fullArgs.join(' '))
@@ -142,6 +141,7 @@ export class S3Uploader {
                 GLOBAL.get().remote.aws_s3_log_bucket,
                 s3Path,
                 s3_args,
+                false
             )
         } catch (error: any) {
             console.error('Failed to upload to default bucket:', error.message)
@@ -172,8 +172,6 @@ export class S3Uploader {
                 'sync',
                 localDir,
                 s3FullPath,
-                '--acl',
-                'public-read',
                 '--delete', // Remove files in S3 that don't exist locally
             ]
 
