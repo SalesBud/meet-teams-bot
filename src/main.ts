@@ -112,6 +112,11 @@ async function handleFailedRecording(): Promise<void> {
 
     console.log(`📤 Sending error to backend`)
 
+    if (!process.env.API_SERVER_BASEURL) {
+        console.log('Skipping API server baseurl request')
+        return
+    }
+
     // Notify backend of recording failure (function deduces errorCode and message automatically)
     if (!GLOBAL.isServerless() && Api.instance) {
         await Api.instance.notifyRecordingFailure()
@@ -132,7 +137,7 @@ async function handleFailedRecording(): Promise<void> {
  * - camelCase => Fn
  * - PascalCase => Classes
  */
-;(async () => {
+; (async () => {
     const meetingParams = await readFromStdin()
 
     try {
@@ -191,8 +196,8 @@ async function handleFailedRecording(): Promise<void> {
         const errorMessage = GLOBAL.hasError()
             ? GLOBAL.getErrorMessage() || 'Unknown error'
             : error instanceof Error
-              ? error.message
-              : 'Recording failed to complete'
+                ? error.message
+                : 'Recording failed to complete'
 
         // Send failure webhook to user before sending to backend
         await Events.recordingFailed(errorMessage)
