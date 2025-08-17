@@ -33,3 +33,5 @@ yarn.lock
 # Misc
 .DS_Store
 buildInfo.json
+
+.env
