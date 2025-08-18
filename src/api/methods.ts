@@ -128,11 +128,11 @@ export class Api {
                 url: `/bots/start_record_failed`,
                 timeout: 10000,
                 data: {
-                    meeting_url: GLOBAL.get().meeting_url,
+                    meeting_url: process.env.MEETING_URL,
                     message: msg,
                     ...(code && { error_code: code }),
                 },
-                params: { bot_uuid: GLOBAL.get().bot_uuid },
+                params: { bot_uuid: process.env.BOT_ID },
             })
             console.log('Successfully notified backend of recording failure')
         } catch (error) {
