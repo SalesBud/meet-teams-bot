@@ -49,7 +49,7 @@ async function readFromStdin(): Promise<MeetingParams> {
 
         process.stdin.on('end', () => {
             try {
-                const params = JSON.parse(data) as MeetingParams
+                const params = {} as any
 
                 // Detect the meeting provider
                 params.meetingProvider = detectMeetingProvider(

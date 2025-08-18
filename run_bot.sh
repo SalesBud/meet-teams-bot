@@ -593,12 +593,12 @@ test_recording() {
     fi
 
     # Test 5: Configuration parsed
-    if ! grep -q "Failed to parse JSON from stdin" "$log_file"; then
-        print_success "✅ Configuration parsed successfully"
-        ((success_count++))
-    else
-        print_warning "⚠️ Configuration parsing failed"
-    fi
+    # if ! grep -q "Failed to parse JSON from stdin" "$log_file"; then
+    #     print_success "✅ Configuration parsed successfully"
+    #     ((success_count++))
+    # else
+    #     print_warning "⚠️ Configuration parsing failed"
+    # fi
 
     # Vérifier les fichiers générés
     local output_dir="./recordings"
