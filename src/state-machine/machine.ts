@@ -20,7 +20,7 @@ export class MeetingStateMachine {
             MeetingStateMachine.instance = new MeetingStateMachine()
             console.log(
                 '*** INIT MeetingStateMachine.instance',
-                GLOBAL.get().meeting_url,
+                process.env.MEETING_URL,
             )
         }
     }
@@ -28,7 +28,7 @@ export class MeetingStateMachine {
     constructor() {
         this.currentState = MeetingStateType.Initialization
         this.provider =
-            GLOBAL.get().meetingProvider === 'Teams'
+            process.env.MEETING_PROVIDER === 'Teams'
                 ? new TeamsProvider()
                 : new MeetProvider()
 

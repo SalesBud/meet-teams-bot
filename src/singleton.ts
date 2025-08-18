@@ -9,7 +9,7 @@ class Global {
     private meetingParams: MeetingParams | null = null
     private endReason: MeetingEndReason | null = null
     private errorMessage: string | null = null
-    public constructor() {}
+    public constructor() { }
 
     public set(meetingParams: MeetingParams) {
         if (this.meetingParams !== null) {
@@ -17,19 +17,21 @@ class Global {
         }
 
         // Validate critical parameters before setting them
+        const meetingUrl = process.env.MEETING_URL
         if (
-            !meetingParams.meeting_url ||
-            meetingParams.meeting_url.trim() === ''
+            !meetingUrl ||
+            meetingUrl.trim() === ''
         ) {
-            throw new Error('Missing required parameter: meeting_url')
+            throw new Error('Missing required environment variable: MEETING_URL')
         }
-        if (!meetingParams.bot_uuid || meetingParams.bot_uuid.trim() === '') {
-            throw new Error('Missing required parameter: bot_uuid')
+        const botUuid = process.env.BOT_ID
+        if (!botUuid || botUuid.trim() === '') {
+            throw new Error('Missing required environment variable: BOT_ID')
         }
 
         this.meetingParams = meetingParams
         console.log(
-            `🤖 Bot ${meetingParams.bot_uuid} initialized with validated parameters`,
+            `BOT_ID: ${botUuid}`,
         )
     }
 
