@@ -58,7 +58,7 @@ async function readFromStdin(): Promise<MeetingParams> {
 
                 // Detect the meeting provider
                 params.meetingProvider = detectMeetingProvider(
-                    params.meeting_url,
+                    process.env.MEETING_URL,
                 )
                 GLOBAL.set(params)
                 PathManager.getInstance().initializePaths()

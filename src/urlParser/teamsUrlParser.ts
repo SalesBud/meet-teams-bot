@@ -30,7 +30,7 @@ function convertLightMeetingToStandard(url: URL): string {
 
         return `https://teams.microsoft.com/v2/?meetingjoin=true#/l/meetup-join/${conversationId}/${messageId}?context=${encodeURIComponent(JSON.stringify(context))}&anon=true`
     } catch (e) {
-        console.error('🥕❌ Error converting light meeting URL:', e)
+        console.error('Error converting light meeting URL:', e)
         GLOBAL.setError(MeetingEndReason.InvalidMeetingUrl)
         throw new Error('Failed to convert Teams light meeting URL')
     }
@@ -48,7 +48,7 @@ function transformTeamsLink(originalLink: string): string {
         // Handle light-meetings format
         if (url.pathname.includes('/light-meetings/launch')) {
             console.log(
-                '🥕➡️ Detected light-meetings URL, converting to working format',
+                'Detected light-meetings URL, converting to working format',
             )
             return convertLightMeetingToStandard(url)
         }
@@ -112,7 +112,7 @@ export function parseMeetingUrlFromJoinInfos(
         // Handle teams.microsoft.com URLs
         if (url.hostname.includes('teams.microsoft.com')) {
             console.log(
-                `🥕🥕🥕 Detected teams.microsoft.com URL ${meeting_url}\n, transforming to more compatible format 🥕🥕🥕`,
+                `Detected teams.microsoft.com URL ${meeting_url}\n, transforming to more compatible format`,
             )
             // Transform the URL to the more compatible format
             const transformedUrl = transformTeamsLink(meeting_url)

@@ -75,11 +75,11 @@ export async function server() {
 
         // Validate meeting URL with the one stored in Singleton
         try {
-            const globalParams = GLOBAL.get()
-            if (data.meeting_url !== globalParams.meeting_url) {
+            const meetingUrl = process.env.MEETING_URL
+            if (data.meeting_url !== meetingUrl) {
                 console.log('Meeting URL mismatch:', {
                     requested: data.meeting_url,
-                    stored: globalParams.meeting_url,
+                    stored: meetingUrl,
                 })
                 return res.status(400).json({
                     error: 'Meeting URL mismatch',
