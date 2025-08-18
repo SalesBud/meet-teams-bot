@@ -100,7 +100,7 @@ export class WaitingRoomState extends BaseState {
 
         try {
             return await this.context.provider.parseMeetingUrl(
-                GLOBAL.get().meeting_url,
+                process.env.MEETING_URL,
             )
         } catch (error) {
             Logger.error('Failed to parse meeting URL:', { error })

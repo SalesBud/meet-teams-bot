@@ -30,7 +30,7 @@ export class MeetingStateMachine {
     constructor() {
         this.currentState = MeetingStateType.Initialization
         this.provider =
-            GLOBAL.get().meetingProvider === 'Teams'
+            process.env.MEETING_PROVIDER === 'Teams'
                 ? new TeamsProvider()
                 : new MeetProvider()
 
