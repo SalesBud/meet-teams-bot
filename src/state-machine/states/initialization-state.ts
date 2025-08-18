@@ -14,7 +14,7 @@ export class InitializationState extends BaseState {
     async execute(): StateExecuteResult {
         try {
             // Validate parameters
-            if (!GLOBAL.get().meeting_url) {
+            if (!process.env.MEETING_URL) {
                 GLOBAL.setError(MeetingEndReason.InvalidMeetingUrl)
                 throw new Error('Invalid meeting URL')
             }
