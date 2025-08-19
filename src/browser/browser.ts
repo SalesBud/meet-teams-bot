@@ -38,6 +38,10 @@ export async function openBrowser(
                 '--enable-webrtc-capture-audio', // Ensure WebRTC can capture audio
                 '--force-webrtc-ip-handling-policy=default', // Better WebRTC handling
 
+                // Virtual camera configuration
+                '--use-fake-device-for-media-stream', // Use fake devices for testing
+                '--use-fake-ui-for-media-stream', // Use fake UI for media permissions
+
                 // Performance and resource management optimizations
                 '--disable-blink-features=AutomationControlled',
                 '--disable-background-timer-throttling',

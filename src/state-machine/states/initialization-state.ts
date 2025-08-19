@@ -22,11 +22,11 @@ export class InitializationState extends BaseState {
             // Setup path manager first (important for logs)
             await this.setupPathManager()
 
-            // Setup branding if needed - non-bloquant
+            // Setup branding generation if needed - non-bloquant
             if (GLOBAL.get().custom_branding_bot_path) {
-                this.setupBranding().catch((error) => {
+                this.setupBrandingGeneration().catch((error) => {
                     console.warn(
-                        'Branding setup failed, continuing anyway:',
+                        'Branding generation failed, continuing anyway:',
                         error,
                     )
                 })
@@ -52,13 +52,13 @@ export class InitializationState extends BaseState {
         }
     }
 
-    private async setupBranding(): Promise<void> {
+    private async setupBrandingGeneration(): Promise<void> {
         this.context.brandingProcess = generateBranding(
             GLOBAL.get().bot_name,
             GLOBAL.get().custom_branding_bot_path,
         )
         await this.context.brandingProcess.wait
-        playBranding()
+        console.log('Branding video generated successfully')
     }
 
     private async setupBrowser(): Promise<void> {
