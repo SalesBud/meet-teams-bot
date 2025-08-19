@@ -3,6 +3,7 @@ import { ScreenRecorderManager } from '../../recording/ScreenRecorder'
 import { HtmlSnapshotService } from '../../services/html-snapshot-service'
 import { GLOBAL } from '../../singleton'
 import { Streaming } from '../../streaming'
+import { playBranding } from '../../branding'
 
 import {
     MeetingEndReason,
@@ -179,6 +180,11 @@ export class WaitingRoomState extends BaseState {
                     () => {
                         joinSuccessful = true
                         console.log('Join successful notification received')
+
+                        // Activate branding after camera is activated
+                        if (GLOBAL.get().custom_branding_bot_path) {
+                            playBranding()
+                        }
                     },
                 )
                 .then(() => {
