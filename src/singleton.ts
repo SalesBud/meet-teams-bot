@@ -76,7 +76,7 @@ class Global {
                 noone_joined_timeout: Number(process.env.NOONE_JOINED_TIMEOUT) || 600,
             },
             mp4_s3_path: process.env.MP4_S3_PATH || 'recordings/output.mp4',
-            custom_branding_bot_path: process.env.CUSTOM_BRANDING_BOT_PATH,
+            custom_branding_bot_path: process.env.CUSTOM_BRANDING_BOT_PATH || 'https://salesbud-assets.s3.amazonaws.com/sbv2.jpg',
             environ: process.env.ENV || 'local',
             aws_s3_temporary_audio_bucket: process.env.AWS_S3_TEMPORARY_AUDIO_BUCKET || 'meeting-baas-dev',
             remote: {
@@ -108,10 +108,7 @@ class Global {
     }
 
     public isServerless(): boolean {
-        if (this.meetingParams === null) {
-            throw new Error('Meeting params are not set')
-        }
-        return this.meetingParams.remote === null
+        return process.env.IS_SERVERLESS === 'true'
     }
 
     public setError(reason: MeetingEndReason, message?: string): void {
