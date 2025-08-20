@@ -63,7 +63,6 @@ export class InitializationState extends BaseState {
             GLOBAL.get().custom_branding_bot_path,
         )
         await this.context.brandingProcess.wait
-
         // Return the path to the generated branding video for Chrome fake video capture
         return 'branding.y4m'
     }
