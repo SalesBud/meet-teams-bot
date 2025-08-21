@@ -1,6 +1,6 @@
-import { S3Client } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import * as path from 'path'
+import { DeleteObjectCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3'
 import * as fs from 'fs'
 import { GLOBAL } from '../singleton'
 import Logger from './DatadogLogger'
@@ -159,6 +159,64 @@ export class S3Uploader {
         } catch (error: any) {
             Logger.error('S3 sync error:', { error: error.message })
             throw error
+        }
+    }
+
+    private async getFilesRecursively(dir: string): Promise<string[]> {
+        const files: string[] = []
+        
+        const items = await fs.promises.readdir(dir, { withFileTypes: true })
+        
+        for (const item of items) {
+            const fullPath = `${dir}/${item.name}`
+            
+            if (item.isDirectory()) {
+                files.push(...(await this.getFilesRecursively(fullPath)))
+            } else {
+                files.push(fullPath)
+            }
+        }
+        
+        return files
+    }
+
+    private async cleanupS3Directory(
+        bucketName: string, 
+        s3Path: string, 
+        localFiles: string[], 
+        localDir: string
+    ): Promise<void> {
+        try {
+            // List objects in S3 directory
+            const command = new ListObjectsV2Command({
+                Bucket: bucketName,
+                Prefix: s3Path,
+            })
+            
+            const response = await this.s3Client.send(command)
+            
+            if (!response.Contents) return
+            
+            for (const object of response.Contents) {
+                if (!object.Key) continue
+                
+                // Check if this S3 object corresponds to a local file
+                const relativeS3Path = object.Key.replace(s3Path, '').replace(/^\/+/, '')
+                const correspondingLocalFile = `${localDir}/${relativeS3Path}`
+                
+                if (!localFiles.includes(correspondingLocalFile)) {
+                    // Delete S3 object that doesn't exist locally
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: bucketName,
+                        Key: object.Key,
+                    })
+                    
+                    await this.s3Client.send(deleteCommand)
+                    console.log(`🗑️ Deleted S3 object: ${object.Key}`)
+                }
+            }
+        } catch (error) {
+            console.warn('Warning: Could not cleanup S3 directory:', error)
         }
     }
 }
