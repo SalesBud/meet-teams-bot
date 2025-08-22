@@ -13,18 +13,11 @@ export function generateBranding(
 ): BrandingHandle {
     try {
         const command = (() => {
-            if (custom_branding_path == null) {
-                return spawn('./generate_branding.sh', [botname], {
-                    env: { ...process.env },
-                    cwd: process.cwd(),
-                })
-            } else {
-                return spawn(
-                    './generate_custom_branding.sh',
-                    [custom_branding_path],
-                    { env: { ...process.env }, cwd: process.cwd() },
-                )
-            }
+            return spawn(
+                './generate_custom_branding.sh',
+                [custom_branding_path],
+                { env: { ...process.env }, cwd: process.cwd() },
+            )
         })()
         command.stderr.addListener('data', (data) => {
             console.log(data.toString())
