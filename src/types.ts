@@ -108,7 +108,7 @@ export type MeetingParams = {
     environ: string // local, prod or preprod
     aws_s3_temporary_audio_bucket: string
     remote: {
-        api_server_baseurl?: string
+        api_server_baseurl: string
         aws_s3_video_bucket: string
         aws_s3_log_bucket: string
     } | null
