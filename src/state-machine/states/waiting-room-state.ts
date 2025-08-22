@@ -175,6 +175,9 @@ export class WaitingRoomState extends BaseState {
                     () => {
                         joinSuccessful = true
                         console.log('Join successful notification received')
+                        if (GLOBAL.get().custom_branding_bot_path) {
+                            console.log('Custom branding is active via browser fake video capture')
+                        }
                     },
                 )
                 .then(() => {
