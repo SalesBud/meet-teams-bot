@@ -3,10 +3,12 @@
 set -e
 
 IMAGE_URL=${1:-""}
+QUIET=${2:-"true"}
 
 if [ -z "$IMAGE_URL" ]; then
     echo "Error: Image URL not provided"
-    echo "Usage: ./generate_custom_branding.sh 'https://example.com/image.jpg'"
+    echo "Usage: ./generate_custom_branding.sh 'https://example.com/image.jpg' [quiet]"
+    echo "  quiet: Set to 'true' to suppress FFmpeg output (default: false)"
     exit 1
 fi
 
@@ -28,17 +30,32 @@ if [ -n "$WSL_DISTRO_NAME" ] || [ -n "$WSLENV" ]; then
     rm temp_image.jpg
 else
     echo "Converting to MP4 (v4l2loopback)..."
-    ffmpeg -loop 1 -i temp_image.jpg \
-           -c:v libx264 -preset fast -crf 23 \
-           -t 5 -pix_fmt yuv420p \
-           -vf "scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2:color=black" \
-           -y branding.mp4
+    if [ "$QUIET" = "true" ]; then
+        ffmpeg -loglevel quiet -loop 1 -i temp_image.jpg \
+               -c:v libx264 -preset fast -crf 23 \
+               -t 5 -pix_fmt yuv420p \
+               -vf "scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2:color=black" \
+               -y branding.mp4
+    else
+        ffmpeg -loglevel error -loop 1 -i temp_image.jpg \
+               -c:v libx264 -preset fast -crf 23 \
+               -t 5 -pix_fmt yuv420p \
+               -vf "scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2:color=black" \
+               -y branding.mp4
+    fi
 
     echo "Converting to Y4M (Chrome fake video capture)..."
-    ffmpeg -loop 1 -i temp_image.jpg \
-           -t 5 -pix_fmt yuv420p \
-           -vf "scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2:color=black" \
-           -y branding.y4m
+    if [ "$QUIET" = "true" ]; then
+        ffmpeg -loglevel quiet -loop 1 -i temp_image.jpg \
+               -t 5 -pix_fmt yuv420p \
+               -vf "scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2:color=black" \
+               -y branding.y4m
+    else
+        ffmpeg -loglevel error -loop 1 -i temp_image.jpg \
+               -t 5 -pix_fmt yuv420p \
+               -vf "scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2:color=black" \
+               -y branding.y4m
+    fi
 
     if [ -f "branding.mp4" ] && [ -f "branding.y4m" ]; then
         echo "Branding files created: branding.mp4 and branding.y4m"
