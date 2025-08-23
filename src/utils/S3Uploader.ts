@@ -17,7 +17,7 @@ export class S3Uploader {
         // AWS SDK v3 automatically detects:
         // - Credentials from environment variables, IAM roles, AWS config files, etc.
         // - Endpoints from AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, etc.
-        // - Regions from AWS_REGION, AWS_DEFAULT_REGION, etc.
+        // - Regions from AWS_REGION, etc.
         this.s3Client = new S3Client()
     }
 
