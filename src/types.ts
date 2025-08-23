@@ -38,28 +38,28 @@ export function normalizeRecordingMode(mode: RecordingMode): 'speaker_view' | 'g
 }
 
 export interface MeetingProviderInterface {
-  openMeetingPage(
-    browserContext: BrowserContext,
-    link: string,
-    streaming_input: string | undefined,
-  ): Promise<Page>
-  joinMeeting(
-    page: Page,
-    cancelCheck: () => boolean,
-    onJoinSuccess: () => void,
-  ): Promise<void>
-  findEndMeeting(page: Page): Promise<boolean>
-  parseMeetingUrl(
-    meeting_url: string,
-  ): Promise<{ meetingId: string; password: string }>
-  getMeetingLink(
-    meeting_id: string,
-    _password: string,
-    _role: number,
-    _bot_name: string,
-    _enter_message?: string,
-  ): string
-  closeMeeting(page: Page): Promise<void>
+    openMeetingPage(
+        browserContext: BrowserContext,
+        link: string,
+        streaming_input: string | undefined,
+    ): Promise<Page>
+    joinMeeting(
+        page: Page,
+        cancelCheck: () => boolean,
+        onJoinSuccess: () => void,
+    ): Promise<void>
+    findEndMeeting(page: Page): Promise<boolean>
+    parseMeetingUrl(
+        meeting_url: string,
+    ): Promise<{ meetingId: string; password: string }>
+    getMeetingLink(
+        meeting_id: string,
+        _password: string,
+        _role: number,
+        _bot_name: string,
+        _enter_message?: string,
+    ): string
+    closeMeeting(page: Page): Promise<void>
 }
 
 export type MeetingParams = {
@@ -113,6 +113,7 @@ export type MeetingParams = {
         aws_s3_log_bucket: string
     } | null
     // -----------------------------------------------------------
+    secret: string
     extra?: any
     zoom_sdk_id?: string
     zoom_sdk_pwd?: string
@@ -120,14 +121,14 @@ export type MeetingParams = {
 }
 
 export type StopRecordParams = {
-  meeting_url: string
-  user_id: number
+    meeting_url: string
+    user_id: number
 }
 
 export type SpeakerData = {
-  name: string
-  id: number
-  timestamp: number
-  isSpeaking: boolean
+    name: string
+    id: number
+    timestamp: number
+    isSpeaking: boolean
 }
 export type MeetingProvider = 'Meet' | 'Teams' | 'Zoom'
