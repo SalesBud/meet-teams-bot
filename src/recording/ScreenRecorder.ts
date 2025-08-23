@@ -611,7 +611,7 @@ export class ScreenRecorder extends EventEmitter {
                         continue
                     }
 
-                    const s3Key = `${botUuid}/${filename}`
+                    const s3Key = `${botUuid}/temporary_audio/${filename}`
                     console.log(
                         `📤 Uploading chunk: ${filename} (${stats.size} bytes)`,
                     )
@@ -619,9 +619,7 @@ export class ScreenRecorder extends EventEmitter {
                     await S3Uploader.getInstance().uploadFile(
                         chunkPath,
                         GLOBAL.get().aws_s3_temporary_audio_bucket,
-                        s3Key,
-                        [],
-                        true
+                        s3Key
                     )
 
                     console.log(`✅ Chunk uploaded: ${filename}`)
@@ -649,9 +647,7 @@ export class ScreenRecorder extends EventEmitter {
                 await S3Uploader.getInstance().uploadFile(
                     this.audioOutputPath,
                     GLOBAL.get().remote?.aws_s3_video_bucket!,
-                    `${identifier}.wav`,
-                    [],
-                    true
+                    `${process.env.BOT_ID}/${identifier}.wav`
                 )
                 fs.unlinkSync(this.audioOutputPath)
             }
@@ -668,9 +664,7 @@ export class ScreenRecorder extends EventEmitter {
                 await S3Uploader.getInstance().uploadFile(
                     this.outputPath,
                     GLOBAL.get().remote?.aws_s3_video_bucket!,
-                    `${identifier}.mp4`,
-                    [],
-                    false
+                    `${process.env.BOT_ID}/${identifier}.mp4`
                 )
                 fs.unlinkSync(this.outputPath)
             }
