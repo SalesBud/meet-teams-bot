@@ -8,6 +8,7 @@ export class TeamsSpeakersObserver {
     private botName: string
     private onSpeakersChange: (speakers: SpeakerData[]) => void
     private isObserving: boolean = false
+    private meetingStartTime: number
 
     // EXACT SAME CONSTANTS AS EXTENSION
     private readonly SPEAKER_LATENCY = 1500 // ms
@@ -20,11 +21,13 @@ export class TeamsSpeakersObserver {
         recordingMode: RecordingMode,
         botName: string,
         onSpeakersChange: (speakers: SpeakerData[]) => void,
+        meetingStartTime?: number,
     ) {
         this.page = page
         this.recordingMode = recordingMode
         this.botName = botName
         this.onSpeakersChange = onSpeakersChange
+        this.meetingStartTime = meetingStartTime || Date.now()
     }
 
     public async startObserving(): Promise<void> {
@@ -67,6 +70,7 @@ export class TeamsSpeakersObserver {
                 mutationDebounce,
                 checkInterval,
                 freezeTimeout,
+                meetingStartTime,
             }) => {
                 console.log(
                     '[Teams-Browser] Setting up observation - EXACT EXTENSION LOGIC',
@@ -176,14 +180,16 @@ export class TeamsSpeakersObserver {
                                         return {
                                             name,
                                             id: 0,
-                                            timestamp,
+                                            timestamp:
+                                                timestamp - meetingStartTime,
                                             isSpeaking: false,
                                         }
                                     } else {
                                         return {
                                             name,
                                             id: 0,
-                                            timestamp,
+                                            timestamp:
+                                                timestamp - meetingStartTime,
                                             isSpeaking: checkIfSpeaking(
                                                 element as HTMLElement,
                                             ),
@@ -222,7 +228,7 @@ export class TeamsSpeakersObserver {
                                     return {
                                         name,
                                         id: 0,
-                                        timestamp,
+                                        timestamp: timestamp - meetingStartTime,
                                         isSpeaking,
                                     }
                                 }
@@ -254,7 +260,7 @@ export class TeamsSpeakersObserver {
                                     return {
                                         name,
                                         id: 0,
-                                        timestamp,
+                                        timestamp: timestamp - meetingStartTime,
                                         isSpeaking,
                                     }
                                 }
@@ -625,6 +631,7 @@ export class TeamsSpeakersObserver {
                 mutationDebounce: this.MUTATION_DEBOUNCE,
                 checkInterval: this.CHECK_INTERVAL,
                 freezeTimeout: this.FREEZE_TIMEOUT,
+                meetingStartTime: this.meetingStartTime,
             },
         )
 
@@ -633,7 +640,10 @@ export class TeamsSpeakersObserver {
 
         // Capture DOM state after Speakers Observer is started
         const htmlSnapshot = HtmlSnapshotService.getInstance()
-        await htmlSnapshot.captureSnapshot(this.page, 'teams_speaker_observer_started')
+        await htmlSnapshot.captureSnapshot(
+            this.page,
+            'teams_speaker_observer_started',
+        )
     }
 
     public stopObserving(): void {

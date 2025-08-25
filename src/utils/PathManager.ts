@@ -74,7 +74,7 @@ export class PathManager {
     }
 
     public getSpeakerLogPath(): string {
-        return path.join(this.getBasePath(), 'speaker_separation.log')
+        return path.join(this.getBasePath(), 'speaker_separation.json')
     }
 
     public getSoundLogPath(): string {

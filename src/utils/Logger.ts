@@ -171,9 +171,9 @@ export async function uploadLogsToS3(options: {
         const soundLogPath = pathManager.getSoundLogPath()
         const s3SoundLogPath = `${logPath}/sound.log`
 
-        // Speaker separation log file
+        // Speaker separation JSON file
         const speakerLogPath = pathManager.getSpeakerLogPath()
-        const s3SpeakerLogPath = `${logPath}/speaker_separation.log`
+        const s3SpeakerLogPath = `${logPath}/speaker_separation.json`
 
         // Screenshots directory
         const screenshotsPath = pathManager.getScreenshotsPath()
@@ -199,14 +199,13 @@ export async function uploadLogsToS3(options: {
             console.log('No sound log file found at path:', soundLogPath)
         }
 
-        // Upload speaker separation log file
         if (fs.existsSync(speakerLogPath)) {
-            logger.info(`Uploading speaker separation logs to S3...`)
+            logger.info(`Uploading speaker separation JSON to S3...`)
             await s3cp(speakerLogPath, s3SpeakerLogPath)
-            logger.info(`Speaker separation logs uploaded to S3`)
+            logger.info(`Speaker separation JSON uploaded to S3`)
         } else {
             console.log(
-                'No speaker separation log file found at path:',
+                'No speaker separation JSON file found at path:',
                 speakerLogPath,
             )
         }
