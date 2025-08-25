@@ -13,6 +13,7 @@ export class SpeakerManager {
     private currentSpeaker: SpeakerData | null = null
     private readonly PAUSE_BETWEEN_SENTENCES = 1000 // 1 second
     private lastSpeakerTime: number | null = null
+    private speakerLog: SpeakerData[][] = []
 
     private constructor() {}
 
@@ -55,14 +56,19 @@ export class SpeakerManager {
 
     private async logSpeakers(speakers: SpeakerData[]): Promise<void> {
         console.table(speakers)
-        const input = JSON.stringify(speakers)
+
+        // Add current speakers data to the accumulated log
+        this.speakerLog.push(speakers)
+
+        // Write the entire log as valid JSON
+        const jsonOutput = JSON.stringify(this.speakerLog, null, 2)
         await fs.promises
-            .appendFile(
+            .writeFile(
                 PathManager.getInstance().getSpeakerLogPath(),
-                `${input}\n`,
+                jsonOutput,
             )
             .catch((e) => {
-                console.error('Cannot append speaker log file:', e)
+                console.error('Cannot write speaker log file:', e)
             })
     }
 
