@@ -29,15 +29,15 @@ print_error()   { echo -e "${RED}${ICON_ERROR} $1${NC}" >&2; }
 # Generate UUID
 generate_uuid() {
     if command -v uuidgen &> /dev/null; then
-        uuidgen | tr '[:lower:]' '[:upper:]'
+        uuidgen | tr '[:upper:]' '[:lower:]'
     elif command -v python3 &> /dev/null; then
-        python3 -c "import uuid; print(str(uuid.uuid4()).upper())"
+        python3 -c "import uuid; print(str(uuid.uuid4()).lower())"
     elif command -v node &> /dev/null; then
-        node -e "console.log(require('crypto').randomUUID().toUpperCase())"
+        node -e "console.log(require('crypto').randomUUID().toLowerCase())"
     else
         # Fallback: generate a pseudo-UUID using date and random
-        date +%s | sha256sum | head -c 8 | tr '[:lower:]' '[:upper:]'
-        echo "-$(date +%N | head -c 4 | tr '[:lower:]' '[:upper:]')-$(date +%N | tail -c 4 | tr '[:lower:]' '[:upper:]')-$(shuf -i 1000-9999 -n 1)-$(shuf -i 100000000000-999999999999 -n 1)"
+        date +%s | sha256sum | head -c 8
+        echo "-$(date +%N | head -c 4)-$(date +%N | tail -c 4)-$(shuf -i 1000-9999 -n 1)-$(shuf -i 100000000000-999999999999 -n 1)"
     fi
 }
 
