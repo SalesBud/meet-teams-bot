@@ -8,6 +8,7 @@ export class MeetSpeakersObserver {
     private botName: string
     private onSpeakersChange: (speakers: SpeakerData[]) => void
     private isObserving: boolean = false
+    private meetingStartTime: number
 
     private readonly SPEAKER_LATENCY = 0 // ms
     private readonly MUTATION_DEBOUNCE = 50 // ms
@@ -19,11 +20,13 @@ export class MeetSpeakersObserver {
         recordingMode: RecordingMode,
         botName: string,
         onSpeakersChange: (speakers: SpeakerData[]) => void,
+        meetingStartTime?: number,
     ) {
         this.page = page
         this.recordingMode = recordingMode
         this.botName = botName
         this.onSpeakersChange = onSpeakersChange
+        this.meetingStartTime = meetingStartTime || Date.now()
     }
 
     public async startObserving(): Promise<void> {
@@ -67,6 +70,7 @@ export class MeetSpeakersObserver {
                 mutationDebounce,
                 checkInterval,
                 freezeTimeout,
+                meetingStartTime,
             }) => {
                 console.log(
                     '[Meet-Browser] Setting up observation - EXACT EXTENSION LOGIC',
@@ -441,12 +445,14 @@ export class MeetSpeakersObserver {
                         }
 
                         // Build the final participant list
+                        // Convert absolute timestamp to relative meeting time in milliseconds
+                        const relativeTimestamp = timestamp - meetingStartTime
                         const speakers = Array.from(
                             uniqueParticipants.values(),
                         ).map((participant) => ({
                             name: participant.name,
                             id: 0,
-                            timestamp,
+                            timestamp: relativeTimestamp,
                             isSpeaking: participant.isSpeaking,
                         }))
 
@@ -742,6 +748,7 @@ export class MeetSpeakersObserver {
                 mutationDebounce: this.MUTATION_DEBOUNCE,
                 checkInterval: this.CHECK_INTERVAL,
                 freezeTimeout: this.FREEZE_TIMEOUT,
+                meetingStartTime: this.meetingStartTime, // Pass meeting start time for relative timestamps
             },
         )
 
@@ -750,8 +757,10 @@ export class MeetSpeakersObserver {
 
         // Capture DOM state after Speakers Observer is started
         const htmlSnapshot = HtmlSnapshotService.getInstance()
-        await htmlSnapshot.captureSnapshot(this.page, 'meet_speaker_observer_started')
-
+        await htmlSnapshot.captureSnapshot(
+            this.page,
+            'meet_speaker_observer_started',
+        )
     }
 
     public stopObserving(): void {
