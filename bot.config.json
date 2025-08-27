@@ -1,1 +1,7 @@
-{}
+{
+  "meeting_url": "https://meet.google.com/yzr-qaki-vyh?authuser=0",
+  "bot_name": "RecordingBot",
+  "bot_uuid": "test-local-bot-uuid",
+  "meeting_duration_minutes": 60,
+  "test_mode": true
+}

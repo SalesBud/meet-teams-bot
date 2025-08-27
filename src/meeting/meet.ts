@@ -705,9 +705,9 @@ async function changeLayout(
         // 3. Cliquer sur "Spotlight"
         const spotlightOption = page.locator(
             [
-                'label:has-text("Spotlight"):has(input[type="radio"])',
-                'label:has(input[name="preferences"]):has-text("Spotlight")',
-                'label:has(span:text-is("Spotlight"))',
+                'label:has-text("Sidebar"):has(input[type="radio"])',
+                'label:has(input[name="preferences"]):has-text("Sidebar")',
+                'label:has(span:text-is("Sidebar"))',
             ].join(','),
         )
 
@@ -732,7 +732,6 @@ async function changeLayout(
             message: (error as Error).message,
             stack: (error as Error).stack,
         })
-
 
         const htmlSnapshot = HtmlSnapshotService.getInstance()
         await htmlSnapshot.captureSnapshot(page, `meet_layout_change_operation_failure_attempt_${currentAttempt}`)

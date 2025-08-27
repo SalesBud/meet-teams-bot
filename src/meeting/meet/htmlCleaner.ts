@@ -2,7 +2,7 @@ import { Page } from '@playwright/test'
 import { HtmlSnapshotService } from '../../services/html-snapshot-service'
 import Logger from '../../utils/DatadogLogger'
 import { RecordingMode } from '../../types'
-import Logger from '../../utils/DatadogLogger'
+import { injectFixedVideoStyle } from './videoFixing'
 
 export class MeetHtmlCleaner {
     private page: Page
@@ -18,10 +18,8 @@ export class MeetHtmlCleaner {
 
         // Capture DOM state before starting HTML cleaning
         const htmlSnapshot = HtmlSnapshotService.getInstance()
-        await htmlSnapshot.captureSnapshot(
-            this.page,
-            'meet_html_cleaner_before_cleaning',
-        )
+        await htmlSnapshot.captureSnapshot(this.page, 'meet_html_cleaner_before_cleaning')
+        await injectFixedVideoStyle(this.page)
 
         // Inject Meet provider logic into browser context
         await this.page.evaluate(async (recordingMode) => {
@@ -34,7 +32,7 @@ export class MeetHtmlCleaner {
                             (elem) =>
                                 ((elem as HTMLElement).style.display = 'none'),
                         )
-                } catch (e) {}
+                } catch (e) { }
                 try {
                     for (div of document.getElementsByTagName('div')) {
                         if (
@@ -44,14 +42,14 @@ export class MeetHtmlCleaner {
                             div.style.display = 'none'
                         }
                     }
-                } catch (e) {}
+                } catch (e) { }
                 try {
                     for (div of document.getElementsByTagName('div')) {
                         if (div.clientHeight === 26) {
                             div.style.display = 'none'
                         }
                     }
-                } catch (e) {}
+                } catch (e) { }
                 try {
                     const bannerDiv = document.querySelector(
                         'div[role="banner"]',
@@ -59,14 +57,14 @@ export class MeetHtmlCleaner {
                     if (bannerDiv) {
                         bannerDiv.style.opacity = '0'
                     }
-                } catch (e) {}
+                } catch (e) { }
                 try {
                     for (div of document.getElementsByTagName('div')) {
                         if (div.clientHeight === 20) {
                             div.style.display = 'none'
                         }
                     }
-                } catch (e) {}
+                } catch (e) { }
                 try {
                     let span
                     for (span of document.getElementsByTagName('span')) {
@@ -75,18 +73,18 @@ export class MeetHtmlCleaner {
                                 'none'
                         }
                     }
-                } catch (e) {}
+                } catch (e) { }
                 try {
                     removeBlackBox()
-                } catch (e) {}
+                } catch (e) { }
                 try {
                     const politeDivs = document.querySelectorAll(
                         'div[aria-live="polite"]',
                     )
                     politeDivs.forEach((div) => {
-                        ;(div as HTMLElement).style.opacity = '0'
+                        ; (div as HTMLElement).style.opacity = '0'
                     })
-                } catch (e) {}
+                } catch (e) { }
 
                 // Hide visitor indicator bar
                 hideVisitorIndicator()
@@ -107,7 +105,7 @@ export class MeetHtmlCleaner {
                                 .find((d) => d.innerText === 'You')
                             rootLeft.parentElement.parentElement.parentElement.parentElement.style.width =
                                 '97vw'
-                        } catch (e) {}
+                        } catch (e) { }
                     }
                 }
 
@@ -135,7 +133,7 @@ export class MeetHtmlCleaner {
                                     'center'
                             }
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             }
 
@@ -164,12 +162,12 @@ export class MeetHtmlCleaner {
                                     'center'
                             }
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                     try {
                         document.getElementsByTagName(
                             'video',
                         )[1].style.position = 'fixed'
-                    } catch (e) {}
+                    } catch (e) { }
                 }
 
                 try {
@@ -179,7 +177,7 @@ export class MeetHtmlCleaner {
                     if (bannerDiv) {
                         bannerDiv.style.opacity = '0'
                     }
-                } catch (e) {}
+                } catch (e) { }
                 try {
                     for (const div of document.getElementsByTagName('div')) {
                         if (
@@ -189,22 +187,22 @@ export class MeetHtmlCleaner {
                             div.style.display = 'none'
                         }
                     }
-                } catch (e) {}
+                } catch (e) { }
                 try {
                     for (const div of document.getElementsByTagName('div')) {
                         if (div.clientHeight === 40) {
                             div.style.opacity = '0'
                         }
                     }
-                } catch (e) {}
+                } catch (e) { }
                 try {
                     const politeDivs = document.querySelectorAll(
                         'div[aria-live="polite"]',
                     )
                     politeDivs.forEach((div) => {
-                        ;(div as HTMLElement).style.opacity = '0'
+                        ; (div as HTMLElement).style.opacity = '0'
                     })
-                } catch (e) {}
+                } catch (e) { }
                 try {
                     var icons = Array.from(
                         document.querySelectorAll('i.google-material-icons'),
@@ -214,7 +212,7 @@ export class MeetHtmlCleaner {
                             icon.parentElement.style.opacity = '0'
                         }
                     })
-                } catch (e) {}
+                } catch (e) { }
 
                 // People panel cleanup
                 let root: any = null
@@ -232,7 +230,7 @@ export class MeetHtmlCleaner {
                                 .find((d) => d.innerText === 'You')
                             rootLeft.parentElement.parentElement.parentElement.parentElement.style.width =
                                 '97vw'
-                        } catch (e) {}
+                        } catch (e) { }
                     }
                 }
 
@@ -381,7 +379,7 @@ export class MeetHtmlCleaner {
         await this.page
             .evaluate(() => {
                 if ((window as any).htmlCleanerObserver) {
-                    ;(window as any).htmlCleanerObserver.disconnect()
+                    ; (window as any).htmlCleanerObserver.disconnect()
                     delete (window as any).htmlCleanerObserver
                 }
             })
