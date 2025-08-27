@@ -12,8 +12,32 @@ export async function openBrowser(
     try {
         console.log('Launching persistent context with exact extension args...')
 
-        // Get Chrome path from environment variable or use default
-        const chromePath = process.env.CHROME_PATH || '/usr/bin/google-chrome'
+        // Get Chrome path from environment variable or use default based on platform
+        let chromePath = process.env.CHROME_PATH
+        if (!chromePath) {
+            if (process.platform === 'win32') {
+                // Default Chrome paths on Windows
+                const possiblePaths = [
+                    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+                    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+                    process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe'
+                ]
+
+                for (const path of possiblePaths) {
+                    if (fs.existsSync(path)) {
+                        chromePath = path
+                        break
+                    }
+                }
+
+                if (!chromePath) {
+                    throw new Error('Chrome not found. Please set CHROME_PATH environment variable.')
+                }
+            } else {
+                // Default for Linux
+                chromePath = '/usr/bin/google-chrome'
+            }
+        }
         console.log(`🔍 Using Chrome path: ${chromePath}`)
 
         // Check if branding video file exists and determine best format

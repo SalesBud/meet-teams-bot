@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test'
 import { RecordingMode, SpeakerData } from '../../types'
 import { HtmlSnapshotService } from '../../services/html-snapshot-service'
+import { VideoFixingObserver } from './videoFixingObserver'
 
 export class MeetSpeakersObserver {
     private page: Page
@@ -8,6 +9,7 @@ export class MeetSpeakersObserver {
     private botName: string
     private onSpeakersChange: (speakers: SpeakerData[]) => void
     private isObserving: boolean = false
+    private videoFixingObserver: VideoFixingObserver
 
     private readonly SPEAKER_LATENCY = 0 // ms
     private readonly MUTATION_DEBOUNCE = 50 // ms
@@ -24,6 +26,7 @@ export class MeetSpeakersObserver {
         this.recordingMode = recordingMode
         this.botName = botName
         this.onSpeakersChange = onSpeakersChange
+        this.videoFixingObserver = new VideoFixingObserver(page)
     }
 
     public async startObserving(): Promise<void> {
@@ -48,7 +51,8 @@ export class MeetSpeakersObserver {
                         `[Meet] 🗣️ CALLBACK RECEIVED: ${speakers.length} speakers from browser`,
                     )
                     this.onSpeakersChange(speakers)
-                    // console.log(`[Meet] ✅ onSpeakersChange callback completed`)
+                    console.log('[Meet] 🗣️ NOTIFYING VIDEO FIXING OBSERVER')
+                    await this.videoFixingObserver.onSpeakersChanged(speakers)
                 } catch (error) {
                     console.error(
                         '[Meet] ❌ Error in speakers callback:',
@@ -172,7 +176,7 @@ export class MeetSpeakersObserver {
                                 }
                                 // Look for iframes inside added nodes
                                 if (node.nodeType === Node.ELEMENT_NODE) {
-                                    ;(node as Element)
+                                    ; (node as Element)
                                         .querySelectorAll('iframe')
                                         .forEach((iframe) => {
                                             callback(iframe)
@@ -252,6 +256,7 @@ export class MeetSpeakersObserver {
                             string,
                             {
                                 name: string
+                                id: string
                                 isSpeaking: boolean
                                 isPresenting: boolean
                                 isInMergedAudio: boolean
@@ -450,12 +455,12 @@ export class MeetSpeakersObserver {
                             isSpeaking: participant.isSpeaking,
                         }))
 
-                        console.log(
-                            `[MEET-DEBUG] Found ${speakers.length} participants:`,
-                            speakers.map(
-                                (s) => `${s.name} (speaking: ${s.isSpeaking})`,
-                            ),
-                        )
+                        // console.log(
+                        //     `[MEET-DEBUG] Found ${speakers.length} participants:`,
+                        //     speakers.map(
+                        //         (s) => `${s.name} (speaking: ${s.isSpeaking})`,
+                        //     ),
+                        // )
 
                         lastValidSpeakers = speakers
                         lastValidSpeakerCheck = currentTime
@@ -700,22 +705,22 @@ export class MeetSpeakersObserver {
                             }
                         })
 
-                        // Cleanup function
-                        ;(window as any).meetObserverCleanup = () => {
-                            console.log('[Meet-Browser] Cleaning up observer')
-                            if (MUTATION_OBSERVER) {
-                                MUTATION_OBSERVER.disconnect()
+                            // Cleanup function
+                            ; (window as any).meetObserverCleanup = () => {
+                                console.log('[Meet-Browser] Cleaning up observer')
+                                if (MUTATION_OBSERVER) {
+                                    MUTATION_OBSERVER.disconnect()
+                                }
+                                if (checkSpeakersTimeout) {
+                                    clearTimeout(checkSpeakersTimeout)
+                                }
+                                if (periodicCheck) {
+                                    clearInterval(periodicCheck)
+                                }
+                                if (iframeObserver) {
+                                    iframeObserver.disconnect()
+                                }
                             }
-                            if (checkSpeakersTimeout) {
-                                clearTimeout(checkSpeakersTimeout)
-                            }
-                            if (periodicCheck) {
-                                clearInterval(periodicCheck)
-                            }
-                            if (iframeObserver) {
-                                iframeObserver.disconnect()
-                            }
-                        }
 
                         // CRITICAL: Initial check
                         checkSpeakers()
@@ -764,7 +769,7 @@ export class MeetSpeakersObserver {
         this.page
             ?.evaluate(() => {
                 if ((window as any).meetObserverCleanup) {
-                    ;(window as any).meetObserverCleanup()
+                    ; (window as any).meetObserverCleanup()
                 }
             })
             .catch((e) => console.error('[Meet] Error cleaning up:', e))
