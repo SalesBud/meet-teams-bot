@@ -236,7 +236,7 @@ export class MeetProvider implements MeetingProviderInterface {
             if (normalizeRecordingMode(GLOBAL.get().recording_mode) !== 'gallery_view') {
                 // Capture DOM state before opening people panel
                 await htmlSnapshot.captureSnapshot(page, 'meet_people_panel_before_open')
-                
+
                 await findShowEveryOne(page, true, cancelCheck)
             }
         } catch (error) {
@@ -621,10 +621,10 @@ async function changeLayout(
 
         // 1. Cliquer sur le bouton "More options"
         console.log('Looking for More options button in call controls...')
-        
+
         // Capture DOM state before clicking More options
         await htmlSnapshot.captureSnapshot(page, `meet_layout_change_before_more_options_attempt_${currentAttempt}`)
-        
+
         const moreOptionsButton = page.locator(
             'div[role="region"][aria-label="Call controls"] button[aria-label="More options"]',
         )
@@ -642,16 +642,16 @@ async function changeLayout(
 
         // 2. Cliquer sur "Change layout" ou "Adjust view"
         console.log('Looking for Change layout/Adjust view menu item...')
-        
+
         // Capture DOM state after More options menu opens
         await htmlSnapshot.captureSnapshot(page, `meet_layout_change_more_options_menu_open_attempt_${currentAttempt}`)
-        
+
         const changeLayoutItem = page.locator(
             '[role="menu"] [role="menuitem"]:has(span:has-text("Change layout"), span:has-text("Adjust view"))',
         )
         await changeLayoutItem.waitFor({ state: 'visible', timeout: 3000 })
         await htmlSnapshot.captureSnapshot(page, `meet_layout_change_change_layout_menu_item_found_attempt_${currentAttempt}`)
-        
+
         await changeLayoutItem.click()
         await page.waitForTimeout(500)
 
@@ -663,28 +663,28 @@ async function changeLayout(
             return false
         }
 
-        // 3. Cliquer sur "Spotlight"
-        console.log('Looking for Spotlight option...')
-        const spotlightOption = page.locator(
+        // 3. Cliquer sur "sidebar"
+        console.log('Looking for sidebar option...')
+        const sidebarOption = page.locator(
             [
-                'label:has-text("Spotlight"):has(input[type="radio"])',
-                'label:has(input[name="preferences"]):has-text("Spotlight")',
-                'label:has(span:text-is("Spotlight"))',
+                'label:has-text("Sidebar"):has(input[type="radio"])',
+                'label:has(input[name="preferences"]):has-text("Sidebar")',
+                'label:has(span:text-is("Sidebar"))',
             ].join(','),
         )
 
-        const count = await spotlightOption.count()
-        console.log(`Found ${count} Spotlight options`)
+        const count = await sidebarOption.count()
+        console.log(`Found ${count} Sidebar options`)
 
-        await spotlightOption.waitFor({ state: 'visible', timeout: 3000 })
-        console.log('Clicking Spotlight option...')
-        await spotlightOption.click()
+        await sidebarOption.waitFor({ state: 'visible', timeout: 3000 })
+        console.log('Clicking sidebar option...')
+        await sidebarOption.click()
         await page.waitForTimeout(500)
 
         // Check one last time if we are still in the meeting
         if (!(await isInMeeting(page))) {
             console.log(
-                'Bot is no longer in the meeting after clicking Spotlight',
+                'Bot is no longer in the meeting after clicking sidebar',
             )
             return false
         }
@@ -696,11 +696,10 @@ async function changeLayout(
             message: (error as Error).message,
             stack: (error as Error).stack,
         })
-        
-        
+
         const htmlSnapshot = HtmlSnapshotService.getInstance()
         await htmlSnapshot.captureSnapshot(page, `meet_layout_change_operation_failure_attempt_${currentAttempt}`)
-        
+
         if (currentAttempt < maxAttempts) {
             console.log(
                 `Retrying layout change (attempt ${currentAttempt + 1}/${maxAttempts})...`,
