@@ -15,6 +15,8 @@ import { getErrorMessageFromCode } from './state-machine/types'
 import { MeetingParams } from './types'
 
 import { exit } from 'process'
+import TranscriptionProcess from './transcription/CreateTranscription'
+import { TranscriptionFinishedData } from './types/Transcript'
 
 // ========================================
 // CONFIGURATION
@@ -217,6 +219,9 @@ async function handleFailedRecording(): Promise<void> {
             } catch (error) {
                 console.error('Failed to upload logs to S3:', error)
             }
+
+            const transcriptionData = await new TranscriptionProcess().createTranscriptionData()
+            await Events.transcriptionFinished(transcriptionData as TranscriptionFinishedData)
         }
         console.log('exiting instance')
         exit(0)

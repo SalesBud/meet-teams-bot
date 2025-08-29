@@ -28,4 +28,5 @@ export interface TranscriptionFinishedData {
     mp4?: string;
     error?: string;
     message?: string;
+    duration?: number;
 }
