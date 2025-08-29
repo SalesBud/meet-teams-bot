@@ -1,4 +1,5 @@
 import { AssemblyAI } from 'assemblyai';
+import { GLOBAL } from '../singleton';
 
 export enum AvailableModels {
     NANO = 'nano',
@@ -17,16 +18,45 @@ export default class AssemblyAiService {
     async getTranscript(
         url: string,
         model: AvailableModels = AvailableModels.UNIVERSAL,
-        speakersExpected?: number
+        minSpeakersExpected?: number,
+        maxSpeakersExpected?: number
     ) {
-        return await this.client.transcripts.transcribe({
+        const transcript = await this.client.transcripts.transcribe({
             audio: url,
             speaker_labels: true,
             speech_model: model,
             language_detection: true,
             disfluencies: true,
-            ...(speakersExpected && { speakers_expected: speakersExpected })
+            speaker_options: {
+                min_speakers_expected: minSpeakersExpected,
+                max_speakers_expected: maxSpeakersExpected
+            }
         });
+
+        const transcriptPath = this.saveTranscriptLocal(transcript);
+
+        return {
+            transcript,
+            transcriptPath
+        };
+    }
+
+    private saveTranscriptLocal(transcript: any) {
+        const bot_id = GLOBAL.get().bot_uuid;
+        const fs = require('fs');
+        const path = require('path');
+        const os = require('os');
+
+        const tempDir = path.join(os.tmpdir(), 'meet-teams-bot-transcripts');
+
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        const tempFilePath = path.join(tempDir, `transcript-${bot_id}-${Date.now()}.json`);
+        fs.writeFileSync(tempFilePath, JSON.stringify(transcript));
+
+        return tempFilePath;
     }
 }
 
