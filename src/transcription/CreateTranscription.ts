@@ -1,63 +1,68 @@
-import RecordingBucketService from '../services/RecordingBucketService';
-import AssemblyAiService from '../services/AssemblyAiService';
-import { minWordsLength } from '../constants/Transcript';
-import { countUniqueSpeakers, extractSpeechSegments } from './utils';
-import SpeakerMappingService from '../services/SpeakerMappingService';
-import { GLOBAL } from '../singleton';
-import { MeetingBotStatus } from '../constants/Transcript';
-import { getErrorMessageFromCode } from '../state-machine/types';
-import { S3Uploader } from '../utils/S3Uploader';
+import RecordingBucketService from '../services/RecordingBucketService'
+import AssemblyAiService from '../services/AssemblyAiService'
+import { minWordsLength } from '../constants/Transcript'
+import { countUniqueSpeakers, extractSpeechSegments } from './utils'
+import SpeakerMappingService from '../services/SpeakerMappingService'
+import { GLOBAL } from '../singleton'
+import { MeetingBotStatus } from '../constants/Transcript'
+import { getErrorMessageFromCode } from '../state-machine/types'
+import { S3Uploader } from '../utils/S3Uploader'
 
-export const EVENT_TYPE = 'CREATE_TRANSCRIPTION';
+export const EVENT_TYPE = 'CREATE_TRANSCRIPTION'
 const GENERAL_ERROR_CODE = 'TranscriptionProcessFailed'
 
 export default class TranscriptionProcess {
     public async createTranscriptionData() {
-
-        const bot_id = GLOBAL.get().bot_uuid;
-        console.info(`Starting create transcription for bot_id: ${bot_id}`);
+        const bot_id = GLOBAL.get().bot_uuid
+        console.info(`Starting create transcription for bot_id: ${bot_id}`)
 
         try {
+            const bucketService = new RecordingBucketService()
 
-            const bucketService = new RecordingBucketService();
-
-            const { audioUrl, videoUrl, speakersLog } = await this.getFiles(bot_id, bucketService);
+            const { audioUrl, videoUrl, speakersLog } = await this.getFiles(
+                bot_id,
+                bucketService,
+            )
 
             if (!speakersLog) {
                 console.error('Failed to process speaker_separation.log file', {
-                    bot_id
-                });
+                    bot_id,
+                })
                 return {
                     event: MeetingBotStatus.FAILED,
                     error: GENERAL_ERROR_CODE,
-                    message: 'Failed to process speaker_separation.log file'
+                    message: 'Failed to process speaker_separation.log file',
                 }
             }
 
-            const { minSpeakersExpected, maxSpeakersExpected, speakers } = countUniqueSpeakers(speakersLog);
+            const { minSpeakersExpected, maxSpeakersExpected, speakers } =
+                countUniqueSpeakers(speakersLog)
 
             console.info(
                 `Processing transcription with ${minSpeakersExpected} to ${maxSpeakersExpected} expected speakers for bot_id: ${bot_id}`,
                 {
-                    speakers
-                }
-            );
+                    speakers,
+                },
+            )
 
             if (minSpeakersExpected === 0) {
-                console.error(`No speakers detected during recording for bot_id: ${bot_id}`)
+                console.error(
+                    `No speakers detected during recording for bot_id: ${bot_id}`,
+                )
                 return {
                     event: MeetingBotStatus.FAILED,
                     error: GENERAL_ERROR_CODE,
-                    message: 'No speakers detected during recording.'
+                    message: 'No speakers detected during recording.',
                 }
             }
 
-            const { transcript, transcriptPath } = await new AssemblyAiService().getTranscript(
-                audioUrl,
-                undefined,
-                minSpeakersExpected,
-                maxSpeakersExpected
-            );
+            const { transcript, transcriptPath } =
+                await new AssemblyAiService().getTranscript(
+                    audioUrl,
+                    undefined,
+                    minSpeakersExpected,
+                    maxSpeakersExpected,
+                )
 
             if (
                 !transcript?.words?.length ||
@@ -67,49 +72,61 @@ export default class TranscriptionProcess {
                 console.error(
                     `Insufficient words (${transcript?.words?.length}) in transcript for bot_id: ${bot_id}`,
                     {
-                        error: transcript.error ?? 'unknown error'
-                    }
-                );
+                        error: transcript.error ?? 'unknown error',
+                    },
+                )
                 return {
                     event: MeetingBotStatus.FAILED,
                     error: GENERAL_ERROR_CODE,
-                    message: `Insufficient words in transcript for bot_id: ${bot_id}`
+                    message: `Insufficient words in transcript for bot_id: ${bot_id}`,
                 }
             }
 
             if (!transcript?.utterances) {
-                console.error(`No utterances found in transcript for bot_id: ${bot_id}`, {
-                    error: transcript.error ?? 'unknown error'
-                });
+                console.error(
+                    `No utterances found in transcript for bot_id: ${bot_id}`,
+                    {
+                        error: transcript.error ?? 'unknown error',
+                    },
+                )
                 return {
                     event: MeetingBotStatus.FAILED,
                     error: GENERAL_ERROR_CODE,
-                    message: `No utterances found in transcript for bot_id: ${bot_id}`
+                    message: `No utterances found in transcript for bot_id: ${bot_id}`,
                 }
             }
 
-            await this.saveTranscriptToS3(transcriptPath, bot_id);
+            await this.saveTranscriptToS3(transcriptPath, bot_id)
 
-            const unifiedTalks = extractSpeechSegments(speakersLog);
-            const detectedSpeakers = transcript.utterances.map(utterance => utterance.speaker);
+            const unifiedTalks = extractSpeechSegments(speakersLog)
+            const detectedSpeakers = transcript.utterances.map(
+                (utterance) => utterance.speaker,
+            )
 
-            const mappedUtterances = await SpeakerMappingService.replaceSpeakerLabels(
-                transcript.utterances,
-                speakers,
-                detectedSpeakers,
-                unifiedTalks
-            );
+            const mappedUtterances =
+                await SpeakerMappingService.replaceSpeakerLabels(
+                    transcript.utterances,
+                    speakers,
+                    detectedSpeakers,
+                    unifiedTalks,
+                )
 
-            console.info('Create transcription data completed, building bot data to webhook');
-            return this.buildBotDataToWebhook(mappedUtterances, videoUrl, transcript);
-
+            console.info(
+                'Create transcription data completed, building bot data to webhook',
+            )
+            return this.buildBotDataToWebhook(
+                mappedUtterances,
+                videoUrl,
+                transcript,
+            )
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorMessage =
+                error instanceof Error ? error.message : String(error)
             console.error('Fatal error in create transcription', {
                 eventType: EVENT_TYPE,
                 error: errorMessage,
-                bot_id
-            });
+                bot_id,
+            })
 
             const endReason = GLOBAL.getEndReason()
             const message = endReason
@@ -118,80 +135,91 @@ export default class TranscriptionProcess {
             return {
                 event: MeetingBotStatus.FAILED,
                 error: GENERAL_ERROR_CODE,
-                message: message
+                message: message,
             }
         }
     }
 
-    private async getFiles(bot_id: string, bucketService: RecordingBucketService) {
-        const bucketName = GLOBAL.get().remote.aws_s3_video_bucket;
+    private async getFiles(
+        bot_id: string,
+        bucketService: RecordingBucketService,
+    ) {
+        const bucketName = GLOBAL.get().remote.aws_s3_video_bucket
 
         const audioUrl = await bucketService.generatePresignedUrl(
             `${bot_id}/${bot_id}.wav`,
-            bucketName
-        );
+            bucketName,
+        )
 
         const videoUrl = await bucketService.generatePresignedUrl(
             `${bot_id}/${bot_id}.mp4`,
-            bucketName
-        );
+            bucketName,
+        )
 
         const speakersLogBuffer = await bucketService.downloadFromBucket(
             `${bot_id}/speaker_separation.json`,
-            bucketName
-        );
+            bucketName,
+        )
 
-        const speakersLog = JSON.parse(speakersLogBuffer.toString()).flat();
+        const speakersLog = JSON.parse(speakersLogBuffer.toString()).flat()
 
         return {
             audioUrl,
             videoUrl,
-            speakersLog
-        };
+            speakersLog,
+        }
     }
 
     private buildBotDataToWebhook(
         mappedUtterances: any,
         videoUrl: string,
-        transcript: any
+        transcript: any,
     ): Record<string, any> {
         if (mappedUtterances.length > 0) {
-            const mappedTranscript = mappedUtterances.map((transcript: any) => ({
-                speaker: transcript.speaker,
-                offset: transcript.start,
-                words: transcript.words.map((word: any) => ({
-                    start: word.start,
-                    end: word.end,
-                    word: word.text
-                }))
-            }));
+            const mappedTranscript = mappedUtterances.map(
+                (transcript: any) => ({
+                    speaker: transcript.speaker,
+                    offset: transcript.start,
+                    words: transcript.words.map((word: any) => ({
+                        start: word.start / 1000,
+                        end: word.end / 1000,
+                        word: word.text,
+                    })),
+                }),
+            )
 
-            const speakers = [...new Set(mappedUtterances.map((t: any) => t.speaker))];
+            const speakers = [
+                ...new Set(mappedUtterances.map((t: any) => t.speaker)),
+            ]
 
             return {
                 transcript: mappedTranscript,
                 speakers: speakers,
                 mp4: videoUrl,
                 event: MeetingBotStatus.COMPLETE,
-                duration: transcript.audio_duration
-            };
+                duration: transcript.audio_duration,
+            }
         }
         return {
             event: MeetingBotStatus.FAILED,
             error: GENERAL_ERROR_CODE,
-            message: 'Transcription is failed with mapped utterances length 0'
-        };
+            message: 'Transcription is failed with mapped utterances length 0',
+        }
     }
 
     private async saveTranscriptToS3(transcriptPath: string, bot_id: string) {
         try {
-            const bucketName = GLOBAL.get().remote.aws_s3_video_bucket;
-            const s3Uploader = S3Uploader.getInstance();
-            await s3Uploader.uploadFile(transcriptPath, bucketName, `${bot_id}/transcript.json`);
+            const bucketName = GLOBAL.get().remote.aws_s3_video_bucket
+            const s3Uploader = S3Uploader.getInstance()
+            await s3Uploader.uploadFile(
+                transcriptPath,
+                bucketName,
+                `${bot_id}/transcript.json`,
+            )
         } catch (error) {
             console.warn('Error saving transcript to S3', {
-                error: error instanceof Error ? error.message : String(error)
-            });
+                error: error instanceof Error ? error.message : String(error),
+            })
         }
     }
 }
