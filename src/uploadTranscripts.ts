@@ -49,6 +49,10 @@ export async function uploadTranscriptTask(
 }
 
 async function upload(speaker: SpeakerData, end: boolean) {
+    if (!process.env.API_SERVER_BASEURL) {
+        console.log('Skipping transcript upload - no API server baseurl')
+        return
+    }
     if (TRANSCIBER_STOPED) {
         console.info('Transcriber is stoped')
         return

@@ -19,6 +19,7 @@ export class SpeakersObserver {
         recordingMode: RecordingMode,
         botName: string,
         onSpeakersChange: (speakers: SpeakerData[]) => void,
+        meetingStartTime?: number,
     ): Promise<void> {
         if (this.isObserving) {
             console.warn('[SpeakersObserver] Already running')
@@ -37,6 +38,7 @@ export class SpeakersObserver {
                     recordingMode,
                     botName,
                     onSpeakersChange,
+                    meetingStartTime,
                 )
                 break
 
@@ -46,6 +48,7 @@ export class SpeakersObserver {
                     recordingMode,
                     botName,
                     onSpeakersChange,
+                    meetingStartTime,
                 )
                 break
 
@@ -81,6 +84,7 @@ export class SpeakersObserver {
                             recordingMode,
                             botName,
                             onSpeakersChange,
+                            meetingStartTime,
                         )
                     }, 5000)
                 } else {

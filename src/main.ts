@@ -15,6 +15,8 @@ import { getErrorMessageFromCode } from './state-machine/types'
 import { MeetingParams } from './types'
 
 import { exit } from 'process'
+import TranscriptionProcess from './transcription/CreateTranscription'
+import { TranscriptionFinishedData } from './types/Transcript'
 
 // ========================================
 // CONFIGURATION
@@ -49,11 +51,11 @@ async function readFromStdin(): Promise<MeetingParams> {
 
         process.stdin.on('end', () => {
             try {
-                const params = JSON.parse(data) as MeetingParams
+                const params = {} as any
 
                 // Detect the meeting provider
                 params.meetingProvider = detectMeetingProvider(
-                    params.meeting_url,
+                    process.env.MEETING_URL,
                 )
                 GLOBAL.set(params)
                 PathManager.getInstance().initializePaths()
@@ -99,6 +101,11 @@ async function handleFailedRecording(): Promise<void> {
 
     console.log(`📤 Sending error to backend`)
 
+    if (!process.env.API_SERVER_BASEURL) {
+        console.log('Skipping API server baseurl request')
+        return
+    }
+
     // Notify backend of recording failure (function deduces errorCode and message automatically)
     if (!GLOBAL.isServerless() && Api.instance) {
         await Api.instance.notifyRecordingFailure()
@@ -125,7 +132,7 @@ async function handleFailedRecording(): Promise<void> {
  * - camelCase => Fn
  * - PascalCase => Classes
  */
-;(async () => {
+; (async () => {
     const meetingParams = await readFromStdin()
 
     try {
@@ -184,8 +191,8 @@ async function handleFailedRecording(): Promise<void> {
         const errorMessage = GLOBAL.hasError()
             ? GLOBAL.getErrorMessage() || 'Unknown error'
             : error instanceof Error
-              ? error.message
-              : 'Recording failed to complete'
+                ? error.message
+                : 'Recording failed to complete'
 
         console.log(`📤 Sending error to backend: ${errorMessage}`)
 
@@ -203,6 +210,9 @@ async function handleFailedRecording(): Promise<void> {
             } catch (error) {
                 console.error('Failed to upload logs to S3:', error)
             }
+
+            const transcriptionData = await new TranscriptionProcess().createTranscriptionData()
+            await Events.transcriptionFinished(transcriptionData as TranscriptionFinishedData)
         }
         console.log('exiting instance')
         exit(0)

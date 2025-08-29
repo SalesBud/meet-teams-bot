@@ -22,22 +22,26 @@ export class InitializationState extends BaseState {
             // Setup path manager first (important for logs)
             await this.setupPathManager()
 
-            // Setup branding if needed - non-bloquant
+            // Setup branding generation if needed - MUST complete before browser setup
+            let brandingVideoPath: string | undefined
             if (GLOBAL.get().custom_branding_bot_path) {
-                this.setupBranding().catch((error) => {
+                try {
+                    brandingVideoPath = await this.setupBrandingGeneration()
+                    console.log('Branding video ready for browser integration')
+                } catch (error) {
                     console.warn(
-                        'Branding setup failed, continuing anyway:',
+                        'Branding generation failed, continuing without custom branding:',
                         error,
                     )
-                })
+                }
             }
 
-            // Setup browser - étape critique
+            // Setup browser - critical (with branding video path if available)
             try {
-                await this.setupBrowser()
+                await this.setupBrowser(brandingVideoPath)
             } catch (error) {
                 console.error('Critical error: Browser setup failed:', error)
-                // Ajouter des détails à l'erreur pour faciliter le diagnostic
+                // Add details to the error for easier diagnosis
                 const enhancedError = new Error(
                     `Browser initialization failed: ${error instanceof Error ? error.message : String(error)}`,
                 )
@@ -52,16 +56,19 @@ export class InitializationState extends BaseState {
         }
     }
 
-    private async setupBranding(): Promise<void> {
+    private async setupBrandingGeneration(): Promise<string> {
         this.context.brandingProcess = generateBranding(
             GLOBAL.get().bot_name,
             GLOBAL.get().custom_branding_bot_path,
         )
         await this.context.brandingProcess.wait
-        playBranding()
+        console.log('Branding video generated successfully')
+
+        // Return the path to the generated branding video for Chrome fake video capture
+        return 'branding.y4m'
     }
 
-    private async setupBrowser(): Promise<void> {
+    private async setupBrowser(brandingVideoPath?: string): Promise<void> {
         const maxRetries = 3
         let lastError: Error | null = null
 
@@ -93,7 +100,7 @@ export class InitializationState extends BaseState {
 
                 // Execute the promise to open the browser with a timeout
                 const result = await Promise.race<BrowserResult>([
-                    openBrowser(false),
+                    openBrowser(false, brandingVideoPath),
                     timeoutPromise,
                 ])
 

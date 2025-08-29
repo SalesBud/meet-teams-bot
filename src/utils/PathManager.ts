@@ -48,7 +48,7 @@ export class PathManager {
     }
 
     public getIdentifier(): string {
-        return `${this.secret}-${this.botUuid}`
+        return `${process.env.BOT_ID!}`
     }
 
     public getBasePath(): string {
@@ -74,7 +74,7 @@ export class PathManager {
     }
 
     public getSpeakerLogPath(): string {
-        return path.join(this.getBasePath(), 'speaker_separation.log')
+        return path.join(this.getBasePath(), 'speaker_separation.json')
     }
 
     public getSoundLogPath(): string {
@@ -96,7 +96,7 @@ export class PathManager {
     public getS3Paths(): { bucketName: string; s3Path: string } {
         const identifier = this.getIdentifier()
         return {
-            bucketName: process.env.AWS_S3_VIDEO_BUCKET || '',
+            bucketName: process.env.AWS_S3_VIDEO_BUCKET || 'meeting-baas-dev',
             s3Path: `${identifier}`,
         }
     }

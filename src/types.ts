@@ -1,19 +1,19 @@
 import { BrowserContext, Page } from '@playwright/test'
 
-type SpeechToTextProvider = 'Default' | 'Gladia' | 'RunPod'
+export type SpeechToTextProvider = 'Default' | 'Gladia' | 'RunPod'
 
 // Support both PascalCase and snake_case for recording_mode
 export type RecordingMode = 'speaker_view' | 'gallery_view' | 'audio_only' | 'SpeakerView' | 'GalleryView' | 'AudioOnly'
 
 /**
  * Normalizes recording mode values to snake_case format.
- * 
+ *
  * This function handles both PascalCase and snake_case values because:
  * 1. API requests come in snake_case format (e.g., "speaker_view")
  * 2. The API server converts these to PascalCase (e.g., "SpeakerView") when sending to the queue
  * 3. The smart-rabbit consumer can handle both cases via #[serde(alias = "...")] attributes
  * 4. The recording server needs to handle both cases for consistency with the queue message format
- * 
+ *
  * @param mode - The recording mode value (can be either PascalCase or snake_case)
  * @returns The normalized recording mode in snake_case format
  */
@@ -106,8 +106,7 @@ export type MeetingParams = {
     environ: string // local, prod or preprod
     aws_s3_temporary_audio_bucket: string
     remote: {
-        s3_args: string[]
-        api_server_baseurl: string
+        api_server_baseurl?: string
         aws_s3_video_bucket: string
         aws_s3_log_bucket: string
     } | null

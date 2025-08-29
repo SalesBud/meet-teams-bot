@@ -131,6 +131,7 @@ export class InCallState extends BaseState {
                 GLOBAL.get().recording_mode,
                 GLOBAL.get().bot_name,
                 onSpeakersChange,
+                this.context.startTime,
             )
 
             // Store the observer in context for cleanup later

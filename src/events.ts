@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { GLOBAL } from './singleton'
+import { TranscriptionFinishedData } from './types/Transcript'
 
 export class Events {
     private static EVENTS: Events | null = null
@@ -84,6 +85,11 @@ export class Events {
         return Events.EVENTS?.sendOnce('recording_succeeded')
     }
 
+    static async transcriptionFinished(data: TranscriptionFinishedData) {
+        const { event } = data
+        return Events.EVENTS?.send(event, data, event)
+    }
+
     static async recordingFailed(errorMessage: string) {
         console.log(`📤 Events.recordingFailed called with: ${errorMessage}`)
         return Events.EVENTS?.sendOnce('recording_failed', {
@@ -95,7 +101,7 @@ export class Events {
         private botId: string,
         private apiKey: string,
         private webhookUrl: string,
-    ) {}
+    ) { }
 
     /**
      * Send an event only once - prevents duplicate webhooks
@@ -104,6 +110,7 @@ export class Events {
     private async sendOnce(
         code: string,
         additionalData: Record<string, any> = {},
+        event: string = 'bot.status_change',
     ): Promise<void> {
         if (this.sentEvents.has(code)) {
             console.log(`Event ${code} already sent, skipping...`)
@@ -112,31 +119,31 @@ export class Events {
 
         this.sentEvents.add(code)
         // Send webhook in parallel - don't wait for completion
-        this.send(code, additionalData)
+        this.send(code, additionalData, event)
     }
 
     private async send(
         code: string,
         additionalData: Record<string, any> = {},
+        event: string = 'bot.status_change',
     ): Promise<void> {
         try {
             await axios({
                 method: 'POST',
                 url: this.webhookUrl,
-                timeout: 5000,
                 headers: {
                     'User-Agent': 'meetingbaas/1.0',
                     'x-meeting-baas-api-key': this.apiKey,
                 },
                 data: {
-                    event: 'bot.status_change',
+                    event,
                     data: {
                         bot_id: this.botId,
                         status: {
                             code,
                             created_at: new Date().toISOString(),
-                            ...additionalData,
                         },
+                        ...additionalData,
                     },
                 },
             })
@@ -145,6 +152,7 @@ export class Events {
                 code,
                 this.botId,
                 this.webhookUrl,
+                event,
             )
         } catch (error) {
             if (error instanceof Error) {

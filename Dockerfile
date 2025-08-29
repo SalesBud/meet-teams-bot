@@ -6,6 +6,8 @@ RUN apt-get update && apt-get install -y curl ca-certificates gnupg
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 RUN apt-get install -y nodejs
 
+RUN npm install -g yarn
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     # Core browser dependencies
@@ -26,7 +28,7 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 # Application setup
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN yarn install
 
 # Install Playwright's Chromium + create symlink for browser.ts compatibility
 RUN npx playwright install chromium && \
@@ -34,7 +36,10 @@ RUN npx playwright install chromium && \
 
 # Build application
 COPY . .
-RUN npm run build
+RUN yarn build
+
+# Make branding scripts executable
+RUN chmod +x generate_custom_branding.sh
 
 # Environment configuration
 ENV NODE_OPTIONS="--max-old-space-size=2048"
