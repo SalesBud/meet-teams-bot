@@ -8,8 +8,9 @@ export interface SpeakerLog {
 }
 
 export interface SpeakerCount {
-    speakersExpected: number;
     speakers: string[];
+    minSpeakersExpected: number;
+    maxSpeakersExpected: number;
 }
 
 export interface TranscriptionFinishedData {
