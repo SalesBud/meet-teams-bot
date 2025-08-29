@@ -3,9 +3,9 @@ import { UnifiedTalk } from '../services/SpeakerMappingService';
 
 export function countUniqueSpeakers(speakersLog: SpeakerLog[]): SpeakerCount {
     try {
-        if (!Array.isArray(speakersLog)) {
-            console.warn('Invalid speakers log format - expected array');
-            return { speakersExpected: 0, speakers: [] };
+        const isOnlyOneSpeaker = new Set(speakersLog.map(speaker => speaker.name)).size === 1
+        if (isOnlyOneSpeaker) {
+            return { speakersExpected: 1, speakers: [speakersLog[0].name] }
         }
 
         const speakingInstances = new Set<string>();
