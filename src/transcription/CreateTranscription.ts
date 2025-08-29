@@ -6,6 +6,7 @@ import SpeakerMappingService from '../services/SpeakerMappingService';
 import { GLOBAL } from '../singleton';
 import { MeetingBotStatus } from '../constants/Transcript';
 import { getErrorMessageFromCode } from '../state-machine/types';
+import { S3Uploader } from '../utils/S3Uploader';
 
 export const EVENT_TYPE = 'CREATE_TRANSCRIPTION';
 const GENERAL_ERROR_CODE = 'TranscriptionProcessFailed'
@@ -33,16 +34,16 @@ export default class TranscriptionProcess {
                 }
             }
 
-            const { speakersExpected, speakers } = countUniqueSpeakers(speakersLog);
+            const { minSpeakersExpected, maxSpeakersExpected, speakers } = countUniqueSpeakers(speakersLog);
 
             console.info(
-                `Processing transcription with ${speakersExpected} expected speakers for bot_id: ${bot_id}`,
+                `Processing transcription with ${minSpeakersExpected} to ${maxSpeakersExpected} expected speakers for bot_id: ${bot_id}`,
                 {
                     speakers
                 }
             );
 
-            if (speakersExpected === 0) {
+            if (minSpeakersExpected === 0) {
                 console.error(`No speakers detected during recording for bot_id: ${bot_id}`)
                 return {
                     event: MeetingBotStatus.FAILED,
@@ -51,10 +52,11 @@ export default class TranscriptionProcess {
                 }
             }
 
-            const transcript = await new AssemblyAiService().getTranscript(
+            const { transcript, transcriptPath } = await new AssemblyAiService().getTranscript(
                 audioUrl,
                 undefined,
-                speakersExpected
+                minSpeakersExpected,
+                maxSpeakersExpected
             );
 
             if (
@@ -85,6 +87,8 @@ export default class TranscriptionProcess {
                     message: `No utterances found in transcript for bot_id: ${bot_id}`
                 }
             }
+
+            await this.saveTranscriptToS3(transcriptPath, bot_id);
 
             const unifiedTalks = extractSpeechSegments(speakersLog);
             const detectedSpeakers = transcript.utterances.map(utterance => utterance.speaker);
@@ -177,5 +181,17 @@ export default class TranscriptionProcess {
             error: GENERAL_ERROR_CODE,
             message: 'Transcription is failed with mapped utterances length 0'
         };
+    }
+
+    private async saveTranscriptToS3(transcriptPath: string, bot_id: string) {
+        try {
+            const bucketName = GLOBAL.get().remote.aws_s3_video_bucket;
+            const s3Uploader = S3Uploader.getInstance();
+            await s3Uploader.uploadFile(transcriptPath, bucketName, `${bot_id}/transcript.json`);
+        } catch (error) {
+            console.warn('Error saving transcript to S3', {
+                error: error instanceof Error ? error.message : String(error)
+            });
+        }
     }
 }

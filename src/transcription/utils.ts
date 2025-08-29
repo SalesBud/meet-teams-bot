@@ -5,35 +5,53 @@ export function countUniqueSpeakers(speakersLog: SpeakerLog[]): SpeakerCount {
     try {
         const isOnlyOneSpeaker = new Set(speakersLog.map(speaker => speaker.name)).size === 1
         if (isOnlyOneSpeaker) {
-            return { speakersExpected: 1, speakers: [speakersLog[0].name] }
+            return { minSpeakersExpected: 1, maxSpeakersExpected: 1, speakers: [speakersLog[0].name] }
         }
 
+        const speakingTimes = new Map<string, number>();
+        const allSpeakers = new Set<string>();
         const speakingInstances = new Set<string>();
 
         speakersLog.forEach((log, index) => {
             const hasValidName = log?.name && typeof log.name === 'string' && log.name.trim() !== '';
             if (log.isSpeaking && hasValidName) {
+                allSpeakers.add(log.name);
                 const nextEntries = speakersLog.slice(index + 1);
                 const endSpeakingEntry = nextEntries.find(entry =>
                     entry.name === log.name && !entry.isSpeaking
                 );
 
-                if (endSpeakingEntry && endSpeakingEntry.timestamp - log.timestamp >= 1000) {
-                    speakingInstances.add(log.name);
+                if (endSpeakingEntry) {
+                    const speakingDuration = endSpeakingEntry.timestamp - log.timestamp;
+                    const currentTotal = speakingTimes.get(log.name) || 0;
+                    speakingTimes.set(log.name, currentTotal + speakingDuration);
+                } else {
+                    const lastLogEntry = speakersLog[speakersLog.length - 1];
+                    const speakingDuration = lastLogEntry.timestamp - log.timestamp;
+                    const currentTotal = speakingTimes.get(log.name) || 0;
+                    speakingTimes.set(log.name, currentTotal + speakingDuration);
                 }
+            }
+        });
+
+        speakingTimes.forEach((duration, speaker) => {
+            if (duration >= 5000) {
+                speakingInstances.add(speaker);
             }
         });
 
         const speakers = Array.from(speakingInstances);
 
         return {
-            speakersExpected: speakers.length,
-            speakers
+            minSpeakersExpected: speakers.length,
+            maxSpeakersExpected: allSpeakers.size,
+            speakers: Array.from(allSpeakers)
         };
     } catch (error) {
         console.error('Error counting unique speakers', { error });
         return {
-            speakersExpected: 0,
+            minSpeakersExpected: 0,
+            maxSpeakersExpected: 0,
             speakers: []
         };
     }

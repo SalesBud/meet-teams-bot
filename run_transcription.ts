@@ -68,6 +68,46 @@ function isDebugMode(): boolean {
     return args.includes('--debug') || process.env.DEBUG === 'true';
 }
 
+// Initialize the global state with required MeetingParams fields
+function initializeGlobalState(botId: string, bucketName: string): void {
+    // Create a minimal MeetingParams object with required fields
+    const params: MeetingParams = {
+        id: botId,
+        bot_uuid: botId,
+        meeting_url: 'https://meet.google.com/dummy-url',
+        meetingProvider: 'Meet' as MeetingProvider,
+        user_token: '',
+        bot_name: 'TranscriptionBot',
+        user_id: 0,
+        session_id: 'transcription-session',
+        email: 'transcription@example.com',
+        vocabulary: [],
+        force_lang: false,
+        bots_api_key: '',
+        recording_mode: 'speaker_view',
+        local_recording_server_location: 'local',
+        automatic_leave: {
+            waiting_room_timeout: 600,
+            noone_joined_timeout: 600
+        },
+        mp4_s3_path: `${botId}/output.mp4`,
+        environ: 'local',
+        aws_s3_temporary_audio_bucket: bucketName,
+        remote: {
+            api_server_baseurl: 'http://localhost',
+            aws_s3_video_bucket: bucketName,
+            aws_s3_log_bucket: bucketName
+        },
+        secret: 'dummy-secret',
+        use_my_vocabulary: false
+    };
+
+    // Set the global state
+    GLOBAL.set(params);
+    console.log(`🔧 Initialized global state with bot_uuid: ${botId}`);
+    console.log(`🔧 Using S3 bucket: ${bucketName}`);
+}
+
 // Save transcription result to file
 function saveTranscriptionResult(result: TranscriptionFinishedData, botId: string): void {
     const outputDir = path.join(__dirname, 'transcriptions');
@@ -98,13 +138,12 @@ async function main(): Promise<void> {
     if (debug) {
         console.log('🐛 DEBUG mode enabled');
         console.log('📊 Environment variables:');
-        console.log(`   - AWS_REGION: ${process.env.AWS_REGION}`);
-        console.log(`   - AWS_ACCESS_KEY_ID: ${process.env.AWS_ACCESS_KEY_ID ? '***MASKED***' : 'NOT SET'}`);
-        console.log(`   - AWS_SECRET_ACCESS_KEY: ${process.env.AWS_SECRET_ACCESS_KEY ? '***MASKED***' : 'NOT SET'}`);
-        console.log(`   - ASSEMBLYAI_API_KEY: ${process.env.ASSEMBLYAI_API_KEY ? '***MASKED***' : 'NOT SET'}`);
         console.log(`   - AWS_S3_VIDEO_BUCKET: ${bucketName}`);
         console.log(`   - BOT_ID: ${botId}`);
     }
+
+    // Initialize global state with required MeetingParams fields
+    initializeGlobalState(botId, bucketName);
 
     try {
 

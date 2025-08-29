@@ -29,8 +29,7 @@ setupConsoleLogger()
 setupExitHandler()
 
 // Configuration to enable/disable DEBUG logs
-export const DEBUG_LOGS =
-    process.argv.includes('--debug') || process.env.DEBUG_LOGS === 'true'
+export const DEBUG_LOGS = process.env.DEBUG_LOGS === 'true'
 if (DEBUG_LOGS) {
     console.log('🐛 DEBUG mode activated - speakers debug logs will be shown')
 }
