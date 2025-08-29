@@ -17,9 +17,12 @@
     "dependencies": {
         "@aws-sdk/client-s3": "^3.828.0",
         "@aws-sdk/lib-storage": "^3.828.0",
+        "@aws-sdk/s3-request-presigner": "^3.414.0",
         "@playwright/test": "^1.53.0",
+        "assemblyai": "^4.15.0",
         "async": "^3.2.6",
         "axios": "0.21.1",
+        "dotenv": "^17.2.1",
         "express": "4.17.1",
         "retry-axios": "^2.5.0",
         "tslib": "^2.8.1",
@@ -43,6 +46,7 @@
     },
     "scripts": {
         "start": "node build/src/main.js",
+        "transcription:debug": "ts-node run_transcription.ts --debug",
         "clean": "rimraf coverage build tmp",
         "build": "echo '{\"buildDate\": \"'$(date -u +'%Y-%m-%dT%H:%M:%SZ')'\"}' > src/buildInfo.json && ./node_modules/typescript/bin/tsc --skipLibCheck -p tsconfig.release.json",
         "watch": "./node_modules/typescript/bin/tsc --skipLibCheck -w -p tsconfig.release.json",
