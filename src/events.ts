@@ -131,7 +131,6 @@ export class Events {
             await axios({
                 method: 'POST',
                 url: this.webhookUrl,
-                timeout: 5000,
                 headers: {
                     'User-Agent': 'meetingbaas/1.0',
                     'x-meeting-baas-api-key': this.apiKey,
