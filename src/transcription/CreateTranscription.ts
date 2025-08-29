@@ -35,8 +35,7 @@ export default class TranscriptionProcess {
                 }
             }
 
-            const { minSpeakersExpected, maxSpeakersExpected, speakers } =
-                countUniqueSpeakers(speakersLog)
+            const { minSpeakersExpected, maxSpeakersExpected, speakers } = countUniqueSpeakers(speakersLog);
 
             console.info(
                 `Processing transcription with ${minSpeakersExpected} to ${maxSpeakersExpected} expected speakers for bot_id: ${bot_id}`,
