@@ -124,20 +124,6 @@ export async function server() {
         }
     }
 
-    // Get Recording Server Build Version Info
-    app.get('/version', async (_req, res) => {
-        console.log(`version requested`)
-        await import('./buildInfo.json')
-            .then((buildInfo) => {
-                res.status(200).json(buildInfo)
-            })
-            .catch((_error) => {
-                res.status(404).json({
-                    error: 'None build has been done',
-                })
-            })
-    })
-
     type Upload = {
         url: string
     }
