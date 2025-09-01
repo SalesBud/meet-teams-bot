@@ -378,6 +378,7 @@ export class MeetSpeakersObserver {
                                         cohortId: isMergedAudio
                                             ? cohortId
                                             : null,
+                                        id: ''
                                     })
                                 }
 
