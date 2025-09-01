@@ -59,6 +59,7 @@ export class MeetHtmlCleaner {
                     }
                 } catch (e) { }
                 try {
+                    // hide collaborators label
                     for (div of document.getElementsByTagName('div')) {
                         if (div.clientHeight === 20) {
                             div.style.display = 'none'
@@ -66,6 +67,7 @@ export class MeetHtmlCleaner {
                     }
                 } catch (e) { }
                 try {
+                    // hide clock
                     let span
                     for (span of document.getElementsByTagName('span')) {
                         if (span.innerText.includes(':')) {
@@ -78,6 +80,7 @@ export class MeetHtmlCleaner {
                     removeBlackBox()
                 } catch (e) { }
                 try {
+                    // hide polit divs, like 'The people panel is opened' label
                     const politeDivs = document.querySelectorAll(
                         'div[aria-live="polite"]',
                     )
@@ -163,11 +166,18 @@ export class MeetHtmlCleaner {
                             }
                         }
                     } catch (e) { }
-                    try {
-                        document.getElementsByTagName(
-                            'video',
-                        )[1].style.position = 'fixed'
-                    } catch (e) { }
+                    // try {
+                    //     const participantVideo = document.getElementsByTagName(
+                    //         'video'
+                    //     )[1]
+                    //     if (participantVideo) {
+                    //         participantVideo.style.position = 'fixed'
+                    //         participantVideo.style.left = '0'
+                    //         participantVideo.style.bottom = '0'
+                    //         participantVideo.style.width = '202px'
+                    //         participantVideo.style.height = '114px'
+                    //     }
+                    // } catch (e) { }
                 }
 
                 try {
@@ -214,7 +224,6 @@ export class MeetHtmlCleaner {
                     })
                 } catch (e) { }
 
-                // People panel cleanup
                 let root: any = null
                 while (root == null) {
                     root = (Array as any)
@@ -351,7 +360,29 @@ export class MeetHtmlCleaner {
                             depth--
                         }
                     }
+                    // else {
+                    //     let element = el
+                    //     let depth = 4
+                    //     while (depth >= 0 && element) {
+                    //         element.style.opacity = '1'
+                    //         // element.style.border = 'transparent'
+                    //         element = element.parentElement
+                    //         element.style.position = 'fixed'
+                    //         element.style.zIndex = `${99999 + depth}`
+                    //         element.style.top = '20px'
+                    //         element.style.right = '20px'
+                    //         element.style.width = '202px'
+                    //         element.style.height = '114px'
+                    //         depth--
+                    //     }
+                    // }
                 })
+                // const tiles = document.querySelectorAll('.dkjMxf')
+                // tiles.forEach((tile: Element) => {
+                //     if (tile instanceof HTMLElement) {
+                //         tile.style.opacity = '0'
+                //     }
+                // })
             }
 
             // Execute Meet provider

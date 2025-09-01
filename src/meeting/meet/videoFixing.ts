@@ -24,9 +24,6 @@ export async function injectFixedVideoStyle(page: Page): Promise<void> {
                         height: 114px !important;
                         border: 5px solidrgb(186, 8, 174) !important;
                         border-radius: 8px !important;
-                        box-shadow: 0 4px 12px rgba(255,0,0,0.5) !important;
-                        background: rgba(255,0,0,0.1) !important;
-                        transform: scale(1.1) !important;
                         opacity: 1 !important;
                     }
                 `

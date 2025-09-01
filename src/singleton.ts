@@ -66,7 +66,7 @@ class Global {
             meeting_url: meetingUrl,
             bot_uuid: botUuid,
             bot_name: process.env.BOT_NAME || 'Salesbud',
-            bots_api_key: process.env.BOTS_API_KEY,
+            bots_api_key: process.env.BOTS_API_KEY || '',
             bots_webhook_url: process.env.BOTS_WEBHOOK_URL,
             streaming_audio_frequency: Number(process.env.STREAMING_AUDIO_FREQUENCY) || 24000,
             enter_message: process.env.ENTER_MESSAGE || 'Recording bot has joined the meeting',
