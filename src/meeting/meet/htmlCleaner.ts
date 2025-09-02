@@ -1,7 +1,6 @@
 import { Page } from '@playwright/test'
 import { RecordingMode } from '../../types'
 import { HtmlSnapshotService } from '../../services/html-snapshot-service'
-import { injectFixedVideoStyle } from './videoFixing'
 
 export class MeetHtmlCleaner {
     private page: Page
@@ -18,11 +17,21 @@ export class MeetHtmlCleaner {
         // Capture DOM state before starting HTML cleaning
         const htmlSnapshot = HtmlSnapshotService.getInstance()
         await htmlSnapshot.captureSnapshot(this.page, 'meet_html_cleaner_before_cleaning')
-        await injectFixedVideoStyle(this.page)
 
         // Inject Meet provider logic into browser context
         await this.page.evaluate(async (recordingMode) => {
             async function removeInitialShityHtml(mode: string) {
+                try {
+                    const firstIndex = 0
+                    const tiles = document.querySelectorAll('.dkjMxf')
+                    Array.from(tiles).forEach((tile: Element, index: number) => {
+                        if (tile instanceof HTMLElement && index !== firstIndex) {
+                            tile.style.opacity = '0'
+                            tile.style.background = 'transparent'
+                            tile.style.removeProperty('left')
+                        }
+                    })
+                } catch (e) { }
                 let div
                 try {
                     document
@@ -275,6 +284,30 @@ export class MeetHtmlCleaner {
                 } catch (e) { }
             }
 
+            async function injectFixedVideoStyle(): Promise<void> {
+                const className = 'fixed-speaker-video'
+                const styleId = 'fixed-speaker-video-style'
+                if (!document.getElementById(styleId)) {
+                    const styleElement = document.createElement('style')
+                    styleElement.id = styleId
+                    styleElement.textContent = `
+                    .${className} {
+                        position: fixed !important;
+                        top: 20px !important;
+                        right: 20px !important;
+                        z-index: 9999999 !important;
+                        width: 202px !important;
+                        height: 114px !important;
+                        border: 5px solidrgb(186, 8, 174) !important;
+                        border-radius: 8px !important;
+                        opacity: 1 !important;
+                        background: rgb(70, 70, 70) !important;
+                    }
+                `
+                    document.head.appendChild(styleElement)
+                }
+            }
+
             function removeBlackBox(): void {
                 const elements: NodeListOf<HTMLElement> =
                     document.querySelectorAll('[data-layout="roi-crop"]')
@@ -307,6 +340,7 @@ export class MeetHtmlCleaner {
             // Execute Meet provider
             console.log('[Meet] Executing HTML provider')
             await removeInitialShityHtml(recordingMode)
+            await injectFixedVideoStyle()
 
             // Setup continuous cleanup
             const observer = new MutationObserver(() => {

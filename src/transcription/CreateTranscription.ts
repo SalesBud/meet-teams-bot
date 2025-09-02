@@ -45,7 +45,7 @@ export default class TranscriptionProcess {
                 },
             )
 
-            if (minSpeakersExpected === 0) {
+            if (maxSpeakersExpected === 0) {
                 console.error(
                     `No speakers detected during recording for bot_id: ${bot_id}`,
                 )
