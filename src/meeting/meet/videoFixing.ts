@@ -61,6 +61,7 @@ export async function fixingParticipantVideoElement(page: Page, participantName:
                     const spans = tile.querySelectorAll('.XEazBc .notranslate, .urlhDe .notranslate');
                     for (const span of spans) {
                         if (span.textContent?.trim() === participantName && tile instanceof HTMLElement) {
+                            tile.style.removeProperty('left')
                             tile.classList.add('fixed-speaker-video')
                             return { success: true, error: null }
                         }

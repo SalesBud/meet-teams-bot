@@ -92,6 +92,21 @@ export class MeetHtmlCleaner {
                 // Hide visitor indicator bar
                 hideVisitorIndicator()
 
+                try {
+                    // Remove all transition properties
+                    const style = document.createElement('style')
+                    style.textContent = `
+                        * {
+                            transition: none !important;
+                            transition-property: none !important;
+                            transition-duration: 0s !important;
+                            transition-timing-function: none !important;
+                            transition-delay: 0s !important;
+                        }
+                    `
+                    document.head.appendChild(style)
+                } catch (e) { }
+
                 // People panel cleanup
                 let root: any = null
                 while (root == null) {
@@ -173,6 +188,7 @@ export class MeetHtmlCleaner {
                             if (tile instanceof HTMLElement && index !== firstIndex) {
                                 tile.style.opacity = '0'
                                 tile.style.background = 'transparent'
+                                tile.style.removeProperty('left')
                             }
                         })
                     } catch (e) { }
