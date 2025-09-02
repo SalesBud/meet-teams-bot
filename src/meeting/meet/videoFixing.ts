@@ -39,19 +39,6 @@ export async function isScreenSharingActive(page: Page): Promise<boolean> {
     })
 }
 
-export async function addFixedVideoClass(page: Page, participantElement: any): Promise<void> {
-    await page.evaluate(
-        (element) => {
-            if (element && !element.classList.contains('fixed-speaker-video')) {
-                element.classList.add('fixed-speaker-video')
-                console.log('[VideoFixing] Classe fixed-speaker-video adicionada ao participante que está falando')
-            }
-        },
-        participantElement
-    )
-}
-
-
 export async function fixingParticipantVideoElement(page: Page, participantName: string): Promise<void> {
     const result = await page.evaluate(
         (participantName) => {
@@ -74,7 +61,7 @@ export async function fixingParticipantVideoElement(page: Page, participantName:
         },
         participantName
     )
-    console.log(`[VideoFixing] Fixed participant ${participantName} video element: Result: ${result.success} - Error: ${result.error}`)
+    console.log(`[VideoFixing] Fixed participant ${participantName} video element: Success: ${result.success} - Error: ${result.error}`)
 }
 
 export async function removeAllFixedVideoClasses(page: Page): Promise<void> {

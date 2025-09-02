@@ -49,7 +49,6 @@
         "transcription:debug": "ts-node run_transcription.ts --debug",
         "clean": "rimraf coverage build tmp",
         "build": "echo '{\"buildDate\": \"'$(date -u +'%Y-%m-%dT%H:%M:%SZ')'\"}' > src/buildInfo.json && ./node_modules/typescript/bin/tsc --skipLibCheck -p tsconfig.release.json",
-        "build:windows": "node -e \"const fs=require('fs');fs.writeFileSync('src/buildInfo.json', JSON.stringify({buildDate: new Date().toISOString()}));\" && npx tsc --skipLibCheck -p tsconfig.release.json",
         "watch": "./node_modules/typescript/bin/tsc --skipLibCheck -w -p tsconfig.release.json",
         "watch-dev": "PROFILE=DEV ts-node-dev --respawn --transpile-only src/main.ts -p tsconfig.release.json",
         "format": "prettier --log-level warn --write \"src/**/*.{jsx,js,ts}\"",
