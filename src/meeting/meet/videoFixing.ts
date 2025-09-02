@@ -48,20 +48,23 @@ export async function fixingParticipantVideoElement(page: Page, participantName:
                     const spans = tile.querySelectorAll('.XEazBc .notranslate, .urlhDe .notranslate');
                     for (const span of spans) {
                         if (span.textContent?.trim() === participantName && tile instanceof HTMLElement) {
+                            if (tile.classList.contains('fixed-speaker-video')) {
+                                return { success: true, message: `Video element already fixed for ${participantName}` }
+                            }
                             tile.style.removeProperty('left')
                             tile.classList.add('fixed-speaker-video')
-                            return { success: true, error: null }
+                            return { success: true, message: `Video element fixed for ${participantName}` }
                         }
                     }
                 }
+                return { success: false, message: `Video element not found for ${participantName}` }
             } catch (e) {
-                return { success: false, error: e }
+                return { success: false, message: `Error fixing video element for ${participantName}: ${e}` }
             }
-            return { success: false, error: null }
         },
         participantName
     )
-    console.log(`[VideoFixing] Fixed participant ${participantName} video element: Success: ${result.success} - Error: ${result.error}`)
+    console.log(`[VideoFixing] Fixed participant ${participantName} video element: Success: ${result.success} - message: ${result.message}`)
 }
 
 export async function removeAllFixedVideoClasses(page: Page): Promise<void> {

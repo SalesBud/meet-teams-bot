@@ -8,9 +8,7 @@ import {
 
 export class VideoFixingObserver {
     private page: Page
-    private isObserving: boolean = false
-    private currentSpeakers: Map<string, boolean> = new Map()
-    private participantVideoElements: Map<string, Element> = new Map()
+    private lastSpeakerName: string = ''
 
     constructor(page: Page) {
         this.page = page
@@ -18,17 +16,19 @@ export class VideoFixingObserver {
 
     private async handleSpeakersChange(speakers: SpeakerData[]): Promise<void> {
         try {
-            const screenSharingActive = await isScreenSharingActive(this.page)
+            const someoneSpeaking = speakers.find(speaker => speaker.isSpeaking)
+            if (someoneSpeaking?.name && someoneSpeaking?.name !== this.lastSpeakerName) {
+                this.lastSpeakerName = someoneSpeaking?.name;
+            }
 
+            const screenSharingActive = await isScreenSharingActive(this.page)
             if (!screenSharingActive) {
                 await removeAllFixedVideoClasses(this.page)
-                this.currentSpeakers.clear()
                 return
             }
-            const someoneSpeaking = speakers.find(speaker => speaker.isSpeaking)
             try {
-                if (someoneSpeaking?.name) {
-                    await fixingParticipantVideoElement(this.page, someoneSpeaking?.name)
+                if (this.lastSpeakerName) {
+                    await fixingParticipantVideoElement(this.page, this.lastSpeakerName)
                 } else {
                     await removeAllFixedVideoClasses(this.page)
                 }
