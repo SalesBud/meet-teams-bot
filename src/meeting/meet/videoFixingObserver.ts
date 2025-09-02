@@ -33,11 +33,11 @@ export class VideoFixingObserver {
                     await removeAllFixedVideoClasses(this.page)
                 }
             } catch (classError) {
-                console.error('[VideoFixingObserver] Error applying/removing fixed classes:', classError)
+                console.warn('[VideoFixingObserver] Error applying/removing fixed classes: ', classError)
             }
 
         } catch (error) {
-            console.error('[VideoFixingObserver] Error handling speakers change:', error)
+            console.warn('[VideoFixingObserver] Error handling speakers change: ', error)
         }
     }
 

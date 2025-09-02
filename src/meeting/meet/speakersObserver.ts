@@ -54,7 +54,6 @@ export class MeetSpeakersObserver {
                         `[Meet] 🗣️ CALLBACK RECEIVED: ${speakers.length} speakers from browser`,
                     )
                     this.onSpeakersChange(speakers)
-                    console.log('[Meet] 🗣️ NOTIFYING VIDEO FIXING OBSERVER')
                     await this.videoFixingObserver.onSpeakersChanged(speakers)
                 } catch (error) {
                     console.error(
