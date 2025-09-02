@@ -1,38 +1,5 @@
 import { Page } from '@playwright/test'
 
-export async function injectFixedVideoStyle(page: Page): Promise<void> {
-    const className = 'fixed-speaker-video'
-    const styleId = 'fixed-speaker-video-style'
-
-    await page.evaluate(
-        ({ className, styleId }) => {
-            if (!document.getElementById(styleId)) {
-                const styleElement = document.createElement('style')
-                styleElement.id = styleId
-                styleElement.textContent = `
-                    .${className} {
-                        position: fixed !important;
-                        top: 20px !important;
-                        right: 20px !important;
-                        z-index: 9999999 !important;
-                        width: 202px !important;
-                        height: 114px !important;
-                        border: 5px solidrgb(186, 8, 174) !important;
-                        border-radius: 8px !important;
-                        opacity: 1 !important;
-                        background: rgb(70, 70, 70) !important;
-                    }
-                `
-                document.head.appendChild(styleElement)
-                console.log('[VideoFixing] Estilo para vídeo fixo criado')
-            } else {
-                console.log('[VideoFixing] Estilo para vídeo fixo já existe')
-            }
-        },
-        { className, styleId }
-    )
-}
-
 export async function isScreenSharingActive(page: Page): Promise<boolean> {
     return await page.evaluate(() => {
         return !!document.querySelector('.dzMPxf .z1gyye')
