@@ -463,13 +463,6 @@ export class MeetSpeakersObserver {
                             isSpeaking: participant.isSpeaking,
                         }))
 
-                        // console.log(
-                        //     `[MEET-DEBUG] Found ${speakers.length} participants:`,
-                        //     speakers.map(
-                        //         (s) => `${s.name} (speaking: ${s.isSpeaking})`,
-                        //     ),
-                        // )
-
                         lastValidSpeakers = speakers
                         lastValidSpeakerCheck = currentTime
                         return speakers
