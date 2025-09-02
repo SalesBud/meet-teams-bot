@@ -166,18 +166,16 @@ export class MeetHtmlCleaner {
                             }
                         }
                     } catch (e) { }
-                    // try {
-                    //     const participantVideo = document.getElementsByTagName(
-                    //         'video'
-                    //     )[1]
-                    //     if (participantVideo) {
-                    //         participantVideo.style.position = 'fixed'
-                    //         participantVideo.style.left = '0'
-                    //         participantVideo.style.bottom = '0'
-                    //         participantVideo.style.width = '202px'
-                    //         participantVideo.style.height = '114px'
-                    //     }
-                    // } catch (e) { }
+                    try {
+                        const firstIndex = 0
+                        const tiles = document.querySelectorAll('.dkjMxf')
+                        Array.from(tiles).forEach((tile: Element, index: number) => {
+                            if (tile instanceof HTMLElement && index !== firstIndex) {
+                                tile.style.opacity = '0'
+                                tile.style.background = 'transparent'
+                            }
+                        })
+                    } catch (e) { }
                 }
 
                 try {
@@ -360,29 +358,7 @@ export class MeetHtmlCleaner {
                             depth--
                         }
                     }
-                    // else {
-                    //     let element = el
-                    //     let depth = 4
-                    //     while (depth >= 0 && element) {
-                    //         element.style.opacity = '1'
-                    //         // element.style.border = 'transparent'
-                    //         element = element.parentElement
-                    //         element.style.position = 'fixed'
-                    //         element.style.zIndex = `${99999 + depth}`
-                    //         element.style.top = '20px'
-                    //         element.style.right = '20px'
-                    //         element.style.width = '202px'
-                    //         element.style.height = '114px'
-                    //         depth--
-                    //     }
-                    // }
                 })
-                // const tiles = document.querySelectorAll('.dkjMxf')
-                // tiles.forEach((tile: Element) => {
-                //     if (tile instanceof HTMLElement) {
-                //         tile.style.opacity = '0'
-                //     }
-                // })
             }
 
             // Execute Meet provider
