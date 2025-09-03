@@ -1,7 +1,8 @@
 import { Page } from '@playwright/test'
-import { RecordingMode, SpeakerData } from '../../types'
+import { normalizeRecordingMode, RecordingMode, SpeakerData } from '../../types'
 import { HtmlSnapshotService } from '../../services/html-snapshot-service'
 import { VideoFixingObserver } from './videoFixingObserver'
+import { GLOBAL } from '../../singleton'
 
 export class MeetSpeakersObserver {
     private page: Page
@@ -54,7 +55,10 @@ export class MeetSpeakersObserver {
                         `[Meet] 🗣️ CALLBACK RECEIVED: ${speakers.length} speakers from browser`,
                     )
                     this.onSpeakersChange(speakers)
-                    await this.videoFixingObserver.onSpeakersChanged(speakers)
+
+                    if (normalizeRecordingMode(GLOBAL.get().recording_mode) === 'fixing_participant') {
+                        await this.videoFixingObserver.onSpeakersChanged(speakers)
+                    }
                 } catch (error) {
                     console.error(
                         '[Meet] ❌ Error in speakers callback:',

@@ -3,7 +3,7 @@ import { BrowserContext, Page } from '@playwright/test'
 export type SpeechToTextProvider = 'Default' | 'Gladia' | 'RunPod'
 
 // Support both PascalCase and snake_case for recording_mode
-export type RecordingMode = 'speaker_view' | 'gallery_view' | 'audio_only' | 'SpeakerView' | 'GalleryView' | 'AudioOnly'
+export type RecordingMode = 'speaker_view' | 'gallery_view' | 'audio_only' | 'fixing_participant' | 'SpeakerView' | 'GalleryView' | 'AudioOnly' | 'FixingParticipant'
 
 /**
  * Normalizes recording mode values to snake_case format.
@@ -17,7 +17,7 @@ export type RecordingMode = 'speaker_view' | 'gallery_view' | 'audio_only' | 'Sp
  * @param mode - The recording mode value (can be either PascalCase or snake_case)
  * @returns The normalized recording mode in snake_case format
  */
-export function normalizeRecordingMode(mode: RecordingMode): 'speaker_view' | 'gallery_view' | 'audio_only' {
+export function normalizeRecordingMode(mode: RecordingMode): 'speaker_view' | 'gallery_view' | 'audio_only' | 'fixing_participant' {
     switch (mode) {
         case 'speaker_view':
         case 'SpeakerView':
@@ -28,6 +28,9 @@ export function normalizeRecordingMode(mode: RecordingMode): 'speaker_view' | 'g
         case 'audio_only':
         case 'AudioOnly':
             return 'audio_only'
+        case 'fixing_participant':
+        case 'FixingParticipant':
+            return 'fixing_participant'
         default:
             // Default to speaker_view if unknown
             console.warn(`Unknown recording mode: ${mode}, defaulting to speaker_view`)

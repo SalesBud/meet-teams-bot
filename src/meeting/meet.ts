@@ -663,28 +663,45 @@ async function changeLayout(
             return false
         }
 
-        // 3. Cliquer sur "sidebar"
-        console.log('Looking for sidebar option...')
-        const sidebarOption = page.locator(
-            [
-                'label:has-text("Sidebar"):has(input[type="radio"])',
-                'label:has(input[name="preferences"]):has-text("Sidebar")',
-                'label:has(span:text-is("Sidebar"))',
-            ].join(','),
-        )
+        if (normalizeRecordingMode(GLOBAL.get().recording_mode) === 'fixing_participant') {
+            console.log('Looking for sidebar option...')
+            const sidebarOption = page.locator(
+                [
+                    'label:has-text("Sidebar"):has(input[type="radio"])',
+                    'label:has(input[name="preferences"]):has-text("Sidebar")',
+                    'label:has(span:text-is("Sidebar"))',
+                ].join(','),
+            )
+            
+            const count = await sidebarOption.count()
+            console.log(`Found ${count} Sidebar options`)
 
-        const count = await sidebarOption.count()
-        console.log(`Found ${count} Sidebar options`)
+            await sidebarOption.waitFor({ state: 'visible', timeout: 3000 })
+            console.log('Clicking sidebar option...')
+            await sidebarOption.click()
+        } else {
+            console.log('Looking for Spotlight option...')
+            const spotlightOption = page.locator(
+                [
+                    'label:has-text("Spotlight"):has(input[type="radio"])',
+                    'label:has(input[name="preferences"]):has-text("Spotlight")',
+                    'label:has(span:text-is("Spotlight"))',
+                ].join(','),
+            )
+            
+            const count = await spotlightOption.count()
+            console.log(`Found ${count} Spotlight options`)
 
-        await sidebarOption.waitFor({ state: 'visible', timeout: 3000 })
-        console.log('Clicking sidebar option...')
-        await sidebarOption.click()
-        await page.waitForTimeout(500)
-
-        // Check one last time if we are still in the meeting
-        if (!(await isInMeeting(page))) {
+            await spotlightOption.waitFor({ state: 'visible', timeout: 3000 })
+            console.log('Clicking spotlight option...')
+            await spotlightOption.click()
+        }
+            await page.waitForTimeout(500)
+            
+            // Check one last time if we are still in the meeting
+            if (!(await isInMeeting(page))) {
             console.log(
-                'Bot is no longer in the meeting after clicking sidebar',
+                'Bot is no longer in the meeting after changing layout',
             )
             return false
         }

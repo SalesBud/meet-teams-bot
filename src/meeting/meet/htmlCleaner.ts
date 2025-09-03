@@ -21,17 +21,26 @@ export class MeetHtmlCleaner {
         // Inject Meet provider logic into browser context
         await this.page.evaluate(async (recordingMode) => {
             async function removeInitialShityHtml(mode: string) {
-                try {
-                    const firstIndex = 0
-                    const tiles = document.querySelectorAll('.dkjMxf')
-                    Array.from(tiles).forEach((tile: Element, index: number) => {
-                        if (tile instanceof HTMLElement && index !== firstIndex) {
-                            tile.style.opacity = '0'
-                            tile.style.background = 'transparent'
-                            tile.style.removeProperty('left')
+                if (mode === 'fixing_participant') {
+                    try {
+                        const firstIndex = 0
+                        const tiles = document.querySelectorAll('.dkjMxf')
+                        Array.from(tiles).forEach((tile: Element, index: number) => {
+                            if (tile instanceof HTMLElement && index !== firstIndex) {
+                                tile.style.opacity = '0'
+                                tile.style.background = 'transparent'
+                                tile.style.removeProperty('left')
+                            }
+                        })
+
+                        if (tiles.length === 1) {
+                            const element = document.querySelectorAll('.aGWPv')[0] as HTMLElement
+                            if (element) {
+                                element.style.opacity = '0'
+                            }
                         }
-                    })
-                } catch (e) { }
+                    } catch (e) { }
+                }
                 let div
                 try {
                     document
@@ -97,20 +106,22 @@ export class MeetHtmlCleaner {
                     })
                 } catch (e) { }
 
-                try {
-                    // Remove all transition properties
-                    const style = document.createElement('style')
-                    style.textContent = `
-                        * {
-                            transition: none !important;
-                            transition-property: none !important;
-                            transition-duration: 0s !important;
-                            transition-timing-function: none !important;
-                            transition-delay: 0s !important;
-                        }
-                    `
-                    document.head.appendChild(style)
-                } catch (e) { }
+                if (mode === 'fixing_participant') {
+                    try {
+                        // Remove all transition properties
+                        const style = document.createElement('style')
+                        style.textContent = `
+                            * {
+                                transition: none !important;
+                                transition-property: none !important;
+                                transition-duration: 0s !important;
+                                transition-timing-function: none !important;
+                                transition-delay: 0s !important;
+                            }
+                        `
+                        document.head.appendChild(style)
+                    } catch (e) { }
+                }
 
                 // People panel cleanup
                 let root: any = null
@@ -187,17 +198,23 @@ export class MeetHtmlCleaner {
                         }
                     } catch (e) { }
                     try {
-                        const firstIndex = 0
-                        const tiles = document.querySelectorAll('.dkjMxf')
-                        Array.from(tiles).forEach((tile: Element, index: number) => {
-                            const tileHasFixedSpeakerVideoClass = tile.classList.contains('fixed-speaker-video')
-                            if (tile instanceof HTMLElement && index !== firstIndex && !tileHasFixedSpeakerVideoClass) {
-                                tile.style.opacity = '0'
-                                tile.style.background = 'transparent'
-                                tile.style.removeProperty('left')
-                                tile.style.right = '20px'
-                            }
-                        })
+                        if (mode === 'fixing_participant') {
+                            const firstIndex = 0
+                            const tiles = document.querySelectorAll('.dkjMxf')
+                            Array.from(tiles).forEach((tile: Element, index: number) => {
+                                const tileHasFixedSpeakerVideoClass = tile.classList.contains('fixed-speaker-video')
+                                if (tile instanceof HTMLElement && index !== firstIndex && !tileHasFixedSpeakerVideoClass) {
+                                    tile.style.opacity = '0'
+                                    tile.style.background = 'transparent'
+                                    tile.style.removeProperty('left')
+                                    tile.style.right = '20px'
+                                }
+                            })
+                        } else {
+                            document.getElementsByTagName(
+                                'video',
+                            )[1].style.position = 'fixed'   
+                        }
                     } catch (e) { }
                 }
 
@@ -335,6 +352,16 @@ export class MeetHtmlCleaner {
                         el.style.position = 'fixed'
                         el.style.zIndex = '9000'
                         el.style.backgroundColor = 'black'
+                    } 
+                    if (recordingMode!== 'fixing_participant') {
+                        let element = el
+                        let depth = 4
+                        while (depth >= 0 && element) {
+                            element.style.opacity = '0'
+                            element.style.border = 'transparent'
+                            element = element.parentElement
+                            depth--
+                        }
                     }
                 })
             }
@@ -342,7 +369,10 @@ export class MeetHtmlCleaner {
             // Execute Meet provider
             console.log('[Meet] Executing HTML provider')
             await removeInitialShityHtml(recordingMode)
-            await injectFixedVideoStyle()
+
+            if (recordingMode === 'fixing_participant') {
+                await injectFixedVideoStyle()
+            }
 
             // Setup continuous cleanup
             const observer = new MutationObserver(() => {
