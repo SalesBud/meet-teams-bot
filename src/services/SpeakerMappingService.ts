@@ -41,7 +41,7 @@ export default class SpeakerMappingService {
                 'Unable to map speakers by overlap\n' +
                 `Detected speakers: ${JSON.stringify(detectedSpeakers)}\n` +
                 `Expected speakers: ${JSON.stringify(allParticipants)}\n` +
-                `Speakers from transcript: ${JSON.stringify(transcriptSegments)}\n` +
+                `Speakers from transcript: ${JSON.stringify(transcriptSegments)}\n`.slice(0, 100) +
                 `Speakers from unified_talks: ${JSON.stringify(unifiedTalks)}`
             );
             return {};
