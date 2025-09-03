@@ -4,6 +4,7 @@ import { SimpleDialogObserver } from '../services/dialog-observer/simple-dialog-
 import { Streaming } from '../streaming'
 import { MeetingProviderInterface } from '../types'
 import { PathManager } from '../utils/PathManager'
+import { VideoFixingObserver } from '../meeting/meet/videoFixingObserver'
 
 export enum MeetingStateType {
     Initialization = 'initialization',
@@ -112,6 +113,9 @@ export interface MeetingContext {
 
     // Dialog observer
     dialogObserver?: SimpleDialogObserver
+
+    // Video fixing observer
+    videoFixingObserver?: VideoFixingObserver
 }
 
 export interface StateTransition {

@@ -124,6 +124,20 @@ export async function server() {
         }
     }
 
+    app.get('/version', async (_req, res) => {
+        console.log(`version requested`)
+        // @ts-ignore
+        await import('./buildInfo.json')
+            .then((buildInfo) => {
+                res.status(200).json(buildInfo)
+            })
+            .catch((_error) => {
+                res.status(404).json({
+                    error: 'None build has been done',
+                })
+            })
+    })
+
     type Upload = {
         url: string
     }
