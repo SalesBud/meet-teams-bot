@@ -194,10 +194,12 @@ export class MeetHtmlCleaner {
                         const firstIndex = 0
                         const tiles = document.querySelectorAll('.dkjMxf')
                         Array.from(tiles).forEach((tile: Element, index: number) => {
-                            if (tile instanceof HTMLElement && index !== firstIndex) {
+                            const tileHasFixedSpeakerVideoClass = tile.classList.contains('fixed-speaker-video')
+                            if (tile instanceof HTMLElement && index !== firstIndex && !tileHasFixedSpeakerVideoClass) {
                                 tile.style.opacity = '0'
                                 tile.style.background = 'transparent'
                                 tile.style.removeProperty('left')
+                                tile.style.right = '20px'
                             }
                         })
                     } catch (e) { }
