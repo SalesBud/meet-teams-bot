@@ -1,8 +1,9 @@
 import { Page } from '@playwright/test'
-import { RecordingMode, SpeakerData } from '../../types'
+import { normalizeRecordingMode, RecordingMode, SpeakerData } from '../../types'
 import { HtmlSnapshotService } from '../../services/html-snapshot-service'
 import Logger from '../../utils/DatadogLogger'
 import { VideoFixingObserver } from './videoFixingObserver'
+import { GLOBAL } from '../../singleton'
 
 export class MeetSpeakersObserver {
     private page: Page
@@ -57,6 +58,10 @@ export class MeetSpeakersObserver {
                         )
                     }
                     this.onSpeakersChange(speakers)
+
+                    if (normalizeRecordingMode(GLOBAL.get().recording_mode) === 'fixing_participant') {
+                        await this.videoFixingObserver.onSpeakersChanged(speakers)
+                    }
                 } catch (error) {
                     Logger.error(
                         '[Meet] Error in speakers callback:',

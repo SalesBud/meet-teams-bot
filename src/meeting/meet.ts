@@ -1,7 +1,8 @@
 import { BrowserContext, Page } from '@playwright/test'
 
 import { MeetingEndReason } from '../state-machine/types'
-import { MeetingProviderInterface } from '../types'
+import { MeetingProviderInterface, normalizeRecordingMode } from '../types'
+
 
 import { HtmlSnapshotService } from '../services/html-snapshot-service'
 import { GLOBAL } from '../singleton'
@@ -702,25 +703,41 @@ async function changeLayout(
             return false
         }
 
-        // 3. Cliquer sur "Spotlight"
-        const spotlightOption = page.locator(
-            [
-                'label:has-text("Sidebar"):has(input[type="radio"])',
-                'label:has(input[name="preferences"]):has-text("Sidebar")',
-                'label:has(span:text-is("Sidebar"))',
-            ].join(','),
-        )
+        if (normalizeRecordingMode(GLOBAL.get().recording_mode) === 'fixing_participant') {
+            Logger.info('Looking for sidebar option...')
+            const sidebarOption = page.locator(
+                [
+                    'label:has-text("Sidebar"):has(input[type="radio"])',
+                    'label:has(input[name="preferences"]):has-text("Sidebar")',
+                    'label:has(span:text-is("Sidebar"))',
+                ].join(','),
+            )
+            
+            const count = await sidebarOption.count()
 
-        const count = await spotlightOption.count()
+            await sidebarOption.waitFor({ state: 'visible', timeout: 3000 })
+            await sidebarOption.click()
+        } else {
+            Logger.info('Looking for Spotlight option...')
+            const spotlightOption = page.locator(
+                [
+                    'label:has-text("Spotlight"):has(input[type="radio"])',
+                    'label:has(input[name="preferences"]):has-text("Spotlight")',
+                    'label:has(span:text-is("Spotlight"))',
+                ].join(','),
+            )
+            
+            const count = await spotlightOption.count()
 
-        await spotlightOption.waitFor({ state: 'visible', timeout: 3000 })
-        await spotlightOption.click()
-        await page.waitForTimeout(500)
-
-        // Check one last time if we are still in the meeting
-        if (!(await isInMeeting(page))) {
-            Logger.info(
-                'Bot is no longer in the meeting after clicking Spotlight',
+            await spotlightOption.waitFor({ state: 'visible', timeout: 3000 })
+            await spotlightOption.click()
+        }
+            await page.waitForTimeout(500)
+            
+            // Check one last time if we are still in the meeting
+            if (!(await isInMeeting(page))) {
+            Logger.warn(
+                'Bot is no longer in the meeting after changing layout',
             )
             return false
         }
