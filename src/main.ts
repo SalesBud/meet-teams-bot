@@ -9,6 +9,7 @@ import {
     setupExitHandler,
     uploadLogsToS3,
 } from './utils/Logger'
+import Logger from './utils/DatadogLogger'
 import { PathManager } from './utils/PathManager'
 
 import { getErrorMessageFromCode } from './state-machine/types'
@@ -31,12 +32,10 @@ setupExitHandler()
 // Configuration to enable/disable DEBUG logs
 export const DEBUG_LOGS = process.env.DEBUG_LOGS === 'true'
 if (DEBUG_LOGS) {
-    console.log('🐛 DEBUG mode activated - speakers debug logs will be shown')
-    // Dynamically import page-logger to enable page logs only when DEBUG_LOGS is true
-    // This is done to avoid circular dependency issues
     import('./browser/page-logger')
         .then(({ enablePrintPageLogs }) => enablePrintPageLogs())
-        .catch((e) => console.error('Failed to enable page logs dynamically:', e))
+        .catch((e) => Logger.error('Failed to enable page logs dynamically:', e))
+    Logger.debug('DEBUG mode activated - speakers debug logs will be shown')
 }
 
 // ========================================
@@ -46,45 +45,33 @@ if (DEBUG_LOGS) {
 /**
  * Read and parse meeting parameters from stdin
  */
-async function readFromStdin(): Promise<MeetingParams> {
-    return new Promise((resolve) => {
-        let data = ''
-        process.stdin.on('data', (chunk) => {
-            data += chunk
-        })
+async function initializeMeetingParams(): Promise<void> {
+    try {
+        const params = {} as MeetingParams
 
-        process.stdin.on('end', () => {
-            try {
-                const params = {} as any
+        params.meetingProvider = detectMeetingProvider(
+            process.env.MEETING_URL,
+        )
 
-                // Detect the meeting provider
-                params.meetingProvider = detectMeetingProvider(
-                    process.env.MEETING_URL,
-                )
-                GLOBAL.set(params)
-                PathManager.getInstance().initializePaths()
-                resolve(params)
-            } catch (error) {
-                console.error('Failed to parse JSON from stdin:', error)
-                console.error('Raw data was:', JSON.stringify(data))
-                process.exit(1)
-            }
-        })
-    })
+        Logger.info(`Initializing meeting parameters for meeting in provider ${params.meetingProvider}`);
+
+        GLOBAL.set(params)
+        PathManager.getInstance().initializePaths()
+    } catch (error) {
+        Logger.error('Failed to initialize meeting parameters:', error)
+        Logger.error('Make sure MEETING_URL and BOT_ID environment variables are set')
+        process.exit(1)
+    }
 }
 
 /**
  * Handle successful recording completion
  */
 async function handleSuccessfulRecording(): Promise<void> {
-    console.log(`${Date.now()} Finalize project && Sending WebHook complete`)
-
-    // Log the end reason for debugging
-    console.log(
+    Logger.debug(
         `Recording ended normally with reason: ${MeetingStateMachine.instance.getEndReason()}`,
     )
 
-    // Handle API endpoint call with built-in retry logic
     if (!GLOBAL.isServerless()) {
         await Api.instance.handleEndMeetingWithRetry()
     }
@@ -97,11 +84,8 @@ async function handleSuccessfulRecording(): Promise<void> {
  * Handle failed recording
  */
 async function handleFailedRecording(): Promise<void> {
-    console.error('Recording did not complete successfully')
-
-    // Log the end reason for debugging
     const endReason = GLOBAL.getEndReason()
-    console.log(`Recording failed with reason: ${endReason || 'Unknown'}`)
+    Logger.info(`Recording failed with reason: ${endReason || 'Unknown'}`)
 
     // Send failure webhook to user before sending to backend
     const errorMessage =
@@ -111,18 +95,16 @@ async function handleFailedRecording(): Promise<void> {
             : 'Recording did not complete successfully')
     await Events.recordingFailed(errorMessage)
 
-    console.log(`📤 Sending error to backend`)
-
     if (!process.env.API_SERVER_BASEURL) {
-        console.log('Skipping API server baseurl request')
         return
     }
 
-    // Notify backend of recording failure (function deduces errorCode and message automatically)
     if (!GLOBAL.isServerless() && Api.instance) {
         await Api.instance.notifyRecordingFailure()
     }
-    console.log(`✅ Error sent to backend successfully`)
+
+    // Send failure webhook to user
+    await Events.recordingFailed(errorMessage)
 }
 
 // ========================================
@@ -139,33 +121,15 @@ async function handleFailedRecording(): Promise<void> {
  * - PascalCase => Classes
  */
 ; (async () => {
-    const meetingParams = await readFromStdin()
+    Logger.info(`Starting meeting bot for bot ${process.env.BOT_ID}`)
+    await initializeMeetingParams()
 
     try {
-        // Log all meeting parameters (masking sensitive data)
-        const logParams = { ...meetingParams }
-
-        // Mask sensitive data for security
-        if (logParams.user_token) logParams.user_token = '***MASKED***'
-        if (logParams.bots_api_key) logParams.bots_api_key = '***MASKED***'
-        if (logParams.speech_to_text_api_key)
-            logParams.speech_to_text_api_key = '***MASKED***'
-        if (logParams.zoom_sdk_pwd) logParams.zoom_sdk_pwd = '***MASKED***'
-
-        console.log(
-            'Received meeting parameters:',
-            JSON.stringify(logParams, null, 2),
-        )
-
-        console.log('About to redirect logs to bot:', meetingParams.bot_uuid)
-        console.log('Logs redirected successfully')
-
         // Start the server
         await server().catch((e) => {
-            console.error(`Failed to start server: ${e}`)
+            Logger.error(`Failed to start server: ${e}`)
             throw e
         })
-        console.log('Server started successfully')
 
         // Initialize components
         MeetingStateMachine.init()
@@ -188,7 +152,7 @@ async function handleFailedRecording(): Promise<void> {
         }
     } catch (error) {
         // Handle explicit errors from state machine
-        console.error(
+        Logger.error(
             'Meeting failed:',
             error instanceof Error ? error.message : error,
         )
@@ -200,29 +164,24 @@ async function handleFailedRecording(): Promise<void> {
                 ? error.message
                 : 'Recording failed to complete'
 
-        // Send failure webhook to user before sending to backend
-        await Events.recordingFailed(errorMessage)
-
-        console.log(`📤 Sending error to backend: ${errorMessage}`)
-
         // Notify backend of recording failure
         if (!GLOBAL.isServerless() && Api.instance) {
             await Api.instance.notifyRecordingFailure()
         }
 
-        console.log(`✅ Error sent to backend successfully`)
+        await Events.recordingFailed(errorMessage)
     } finally {
         if (!GLOBAL.isServerless()) {
             try {
                 await uploadLogsToS3({})
             } catch (error) {
-                console.error('Failed to upload logs to S3:', error)
+                Logger.error('Failed to upload logs to S3:', error)
             }
 
             const transcriptionData = await new TranscriptionProcess().createTranscriptionData()
             await Events.transcriptionFinished(transcriptionData as TranscriptionFinishedData)
         }
-        console.log('exiting instance')
+        Logger.info('Exiting instance')
         exit(0)
     }
 })()
