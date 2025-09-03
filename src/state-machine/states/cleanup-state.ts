@@ -78,6 +78,12 @@ export class CleanupState extends BaseState {
                 (async () => {
                     await this.stopHtmlCleaner()
                 })(),
+
+                // 7. Stop video fixing observer (with 3s timeout)
+                (async () => {
+                    console.info('🧹 Step 7/7: Stopping video fixing observer')
+                    await this.stopVideoFixingObserver()
+                })(),
             ])
 
             // 7. Clean up browser resources (must be sequential after others)
@@ -162,6 +168,33 @@ export class CleanupState extends BaseState {
             }
             // Don't throw as this is non-critical
         }
+    }
+
+    private async stopVideoFixingObserver(): Promise<void> {
+        try {
+            if (this.context.videoFixingObserver) {
+                await Promise.race([
+                    (async () => {
+                        this.context.videoFixingObserver.stopObserving()
+                        this.context.videoFixingObserver = undefined
+                    })(),
+                    new Promise((_, reject) =>
+                        setTimeout(
+                            () =>
+                                reject(
+                                    new Error('Video fixing observer stop timeout'),
+                                ),
+                            3000,
+                        ),
+                    ),
+                ])
+            }
+        } catch (error) {
+            if (error instanceof Error && error.message?.includes('timeout')) {
+                this.context.videoFixingObserver = undefined
+            }
+        }
+        
     }
 
     private async stopScreenRecorder(): Promise<void> {
