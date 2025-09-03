@@ -12,11 +12,48 @@ export async function openBrowser(
     try {
         console.log('Launching persistent context with exact extension args...')
 
-        // Get Chrome path from environment variable or use default
-        const chromePath = process.env.CHROME_PATH || '/usr/bin/google-chrome'
+        let chromePath = process.env.CHROME_PATH
+        if (!chromePath) {
+            if (process.platform === 'win32') {
+                const possiblePaths = [
+                    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+                    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+                    process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe'
+                ]
+
+                for (const path of possiblePaths) {
+                    if (fs.existsSync(path)) {
+                        chromePath = path
+                        break
+                    }
+                }
+
+                if (!chromePath) {
+                    throw new Error('Chrome not found. Please set CHROME_PATH environment variable.')
+                }
+            } else if (process.platform === 'darwin') {
+                const possiblePaths = [
+                    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+                    process.env.HOME + '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+                ]
+
+                for (const path of possiblePaths) {
+                    if (fs.existsSync(path)) {
+                        chromePath = path
+                        break
+                    }
+                }
+
+                if (!chromePath) {
+                    console.warn('Chrome not found in standard macOS locations, trying Playwright bundled Chromium')
+                }
+            } else {
+                chromePath = '/usr/bin/google-chrome'
+            }
+        }
         console.log(`🔍 Using Chrome path: ${chromePath}`)
 
-        // Check if branding video file exists and determine best format
         const finalBrandingPath = await getBrandingPath(brandingVideoPath)
 
         // Build Chrome arguments dynamically
@@ -81,10 +118,9 @@ export async function openBrowser(
             chromeArgs.push(`--use-file-for-fake-video-capture=${finalBrandingPath}`)
         }
 
-        const context = await chromium.launchPersistentContext('', {
+        const launchOptions: any = {
             headless: false,
             viewport: { width, height },
-            executablePath: chromePath,
             args: chromeArgs,
             slowMo: slowMo ? 100 : undefined,
             permissions: ['microphone', 'camera'],
@@ -92,7 +128,14 @@ export async function openBrowser(
             acceptDownloads: true,
             bypassCSP: true,
             timeout: 120000,
-        })
+        }
+
+        // Only set executablePath if we found Chrome, otherwise use Playwright's bundled browser
+        if (chromePath) {
+            launchOptions.executablePath = chromePath
+        }
+
+        const context = await chromium.launchPersistentContext('', launchOptions)
 
         console.log('✅ Chromium launched with PulseAudio configuration')
         return { browser: context }

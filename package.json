@@ -18,7 +18,7 @@
         "@aws-sdk/client-s3": "^3.828.0",
         "@aws-sdk/lib-storage": "^3.828.0",
         "@aws-sdk/s3-request-presigner": "^3.414.0",
-        "@playwright/test": "^1.53.0",
+        "@playwright/test": "^1.55.0",
         "assemblyai": "^4.15.0",
         "async": "^3.2.6",
         "axios": "0.21.1",
@@ -58,7 +58,8 @@
         "check:unused-exports": "ts-unused-exports tsconfig.json",
         "check:unused-imports": "unimported",
         "check:unused-deps": "depcheck",
-        "check:dead-code": "npm run check:unused-exports && npm run check:unused-imports && npm run check:unused-deps"
+        "check:dead-code": "npm run check:unused-exports && npm run check:unused-imports && npm run check:unused-deps",
+        "run:bot": "ts-node src/main.ts"
     },
     "author": "Meet Teams Bot Contributors",
     "license": "Apache-2.0",

@@ -39,33 +39,25 @@ if (DEBUG_LOGS) {
 // ========================================
 
 /**
- * Read and parse meeting parameters from stdin
+ * Initialize meeting parameters from environment variables
  */
-async function readFromStdin(): Promise<MeetingParams> {
-    return new Promise((resolve) => {
-        let data = ''
-        process.stdin.on('data', (chunk) => {
-            data += chunk
-        })
+async function initializeMeetingParams(): Promise<MeetingParams> {
+    try {
+        const params = {} as any
 
-        process.stdin.on('end', () => {
-            try {
-                const params = {} as any
-
-                // Detect the meeting provider
-                params.meetingProvider = detectMeetingProvider(
-                    process.env.MEETING_URL,
-                )
-                GLOBAL.set(params)
-                PathManager.getInstance().initializePaths()
-                resolve(params)
-            } catch (error) {
-                console.error('Failed to parse JSON from stdin:', error)
-                console.error('Raw data was:', JSON.stringify(data))
-                process.exit(1)
-            }
-        })
-    })
+        // Detect the meeting provider from environment variable
+        params.meetingProvider = detectMeetingProvider(
+            process.env.MEETING_URL,
+        )
+        
+        GLOBAL.set(params)
+        PathManager.getInstance().initializePaths()
+        return params
+    } catch (error) {
+        console.error('Failed to initialize meeting parameters:', error)
+        console.error('Make sure MEETING_URL and BOT_ID environment variables are set')
+        process.exit(1)
+    }
 }
 
 /**
@@ -132,7 +124,7 @@ async function handleFailedRecording(): Promise<void> {
  * - PascalCase => Classes
  */
 ; (async () => {
-    const meetingParams = await readFromStdin()
+    const meetingParams = await initializeMeetingParams()
 
     try {
         // Log all meeting parameters (masking sensitive data)
