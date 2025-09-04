@@ -24,25 +24,8 @@ export class MeetHtmlCleaner {
             async function removeInitialShityHtml(mode: string) {
                 if (mode === 'fixing_participant') {
                     try {
-                        const firstIndex = 0
-                        const tiles = document.querySelectorAll('.dkjMxf')
-                        Array.from(tiles).forEach((tile: Element, index: number) => {
-                            if (tile instanceof HTMLElement && index !== firstIndex) {
-                                tile.style.opacity = '0'
-                                tile.style.background = 'transparent'
-                                tile.style.removeProperty('left')
-                            }
-                        })
-
-                        if (tiles.length === 1) {
-                            const element = document.querySelectorAll('.aGWPv')[0] as HTMLElement
-                            if (element) {
-                                element.style.opacity = '0'
-                            }
-                        }
-                    } catch (e) {
-                        console.error('[Meet] Error removing initial shity HTML tiles:', e)
-                    }
+                        configureTilesHtml()
+                    } catch (e) { }
                 }
                 let div
                 try {
@@ -149,7 +132,7 @@ export class MeetHtmlCleaner {
                     }
                 }
 
-                if (mode !== 'gallery_view') {
+                if (mode !== 'gallery_view' && mode !== 'fixing_participant') {
                     try {
                         const video = document.getElementsByTagName(
                             'video',
@@ -216,39 +199,8 @@ export class MeetHtmlCleaner {
                 }
             }
                 
-            function configureTilesHtml(mode: string) {
-                const isScreenSharingActive = !!document.querySelector('.dzMPxf .z1gyye')
-                console.log('[TILES] Screen sharing is active: ', isScreenSharingActive)
+            function configureTilesHtml() {
                 const firstIndex = 0
-                try {
-                    const video = document.getElementsByTagName(
-                        'video',
-                    )[firstIndex] as HTMLVideoElement
-                    if (video) {
-                        console.log('[TILES] Configuring first video HTML by getElementsByTagName')
-                        video.style.position = 'fixed'
-                        video.style.display = 'block'
-                        video.style.left = '0'
-                        video.style.top = '0'
-                        video.style.zIndex = '1'
-                        video.style.width = '100vw'
-                        video.style.height = '100vh'
-                        if (video?.parentElement?.style) {
-                            video.parentElement.style.background = '#000'
-                            video.parentElement.style.top = '0'
-                            video.parentElement.style.left = '0'
-                            video.parentElement.style.width = '100vw'
-                            video.parentElement.style.height = '100vh'
-                            video.parentElement.style.position = 'fixed'
-                            video.parentElement.style.display = 'flex'
-                            video.parentElement.style.alignItems = 'center'
-                            video.parentElement.style.justifyContent =
-                                'center'
-                        }
-                    }
-                } catch (e) {
-                    console.error('[TILES] Error configuring first video HTML:', e)
-                }
                 try {
                     const tiles = document.querySelectorAll('.dkjMxf')
                     Array.from(tiles).forEach((tile: Element, index: number) => {
@@ -258,49 +210,48 @@ export class MeetHtmlCleaner {
                             tile.style.background = 'transparent'
                             tile.style.removeProperty('left')
                         }
+
+                        const video = tile.querySelector('video');
+                        if (video && index === firstIndex) {
+                            console.log('Elemento de vídeo encontrado:', video);
+                            video.style.position = 'fixed'
+                            video.style.display = 'block'
+                            video.style.left = '0'
+                            video.style.top = '0'
+                            video.style.zIndex = '1'
+                            video.style.width = '100vw'
+                            video.style.height = '100vh'
+                            if (video?.parentElement?.style) {
+                                video.parentElement.style.background = '#000'
+                                video.parentElement.style.top = '0'
+                                video.parentElement.style.left = '0'
+                                video.parentElement.style.width = '100vw'
+                                video.parentElement.style.height = '100vh'
+                                video.parentElement.style.position = 'fixed'
+                                video.parentElement.style.display = 'flex'
+                                video.parentElement.style.alignItems = 'center'
+                                video.parentElement.style.justifyContent =
+                                    'center'
+                            }
+                        } else if (video && index === 1) {
+                            video.style.position = 'fixed'
+                            video.style.display = 'block'
+                            video.style.left = '0'
+                            video.style.top = '0'
+                            video.style.zIndex = '1'
+                            video.style.width = '100vw'
+                            video.style.height = '100vh'
+                        }
                     })
+                    
                 } catch (e) {
                     console.error('[TILES] Error configuring tiles HTML:', e)
-                }
-                try {
-                    let secondVideo = document.getElementsByTagName(
-                        'video',
-                    )[1] as HTMLVideoElement
-                    if (secondVideo) {
-                        console.log('[TILES] Configuring second video HTML by getElementsByTagName')
-                        secondVideo.style.position = 'fixed'
-                        secondVideo.style.display = 'block'
-                        secondVideo.style.left = '0'
-                        secondVideo.style.top = '0'
-                        secondVideo.style.zIndex = '1'
-                        secondVideo.style.width = '100vw'
-                        secondVideo.style.height = '100vh'
-                    } else {
-                        secondVideo = document.querySelectorAll(
-                            'video',
-                        )[1] as HTMLVideoElement
-                        if (secondVideo) {
-                            console.log('[TILES] Configuring second video HTML by query selector')
-                            secondVideo.style.position = 'fixed'
-                            secondVideo.style.display = 'block'
-                            secondVideo.style.left = '0'
-                            secondVideo.style.top = '0'
-                            secondVideo.style.zIndex = '1'
-                            secondVideo.style.width = '100vw'
-                            secondVideo.style.height = '100vh'
-                        }
-                    }
-                    if (!secondVideo) {
-                        console.error('[TILES] Second video not found')
-                    }
-                } catch (e) {
-                    console.error('[TILES] Error configuring second video HTML:', e)
                 }
             }
 
             function removeShityHtml(mode: string) {
                 if (mode === 'fixing_participant') {
-                    configureTilesHtml(mode)
+                    configureTilesHtml()
                 } else if (mode !== 'gallery_view') {
                     configureVideoHtml(mode)
                 }
