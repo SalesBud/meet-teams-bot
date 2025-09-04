@@ -40,7 +40,9 @@ export class MeetHtmlCleaner {
                                 element.style.opacity = '0'
                             }
                         }
-                    } catch (e) { }
+                    } catch (e) {
+                        console.error('[Meet] Error removing initial shity HTML tiles:', e)
+                    }
                 }
                 let div
                 try {
@@ -175,51 +177,132 @@ export class MeetHtmlCleaner {
                 }
             }
 
-            function removeShityHtml(mode: string) {
-                if (mode !== 'gallery_view') {
-                    try {
-                        const video = document.getElementsByTagName(
+            function configureVideoHtml(mode: string) {
+                if (mode === 'gallery_view') {
+                    return
+                }
+                try {
+                    const video = document.getElementsByTagName(
+                        'video',
+                    )[0] as HTMLVideoElement
+                    if (video) {
+                        video.style.position = 'fixed'
+                        video.style.display = 'block'
+                        video.style.left = '0'
+                        video.style.top = '0'
+                        video.style.zIndex = '1'
+                        if (video?.parentElement?.style) {
+                            video.parentElement.style.background = '#000'
+                            video.parentElement.style.top = '0'
+                            video.parentElement.style.left = '0'
+                            video.parentElement.style.width = '100vw'
+                            video.parentElement.style.height = '100vh'
+                            video.parentElement.style.position = 'fixed'
+                            video.parentElement.style.display = 'flex'
+                            video.parentElement.style.alignItems = 'center'
+                            video.parentElement.style.justifyContent =
+                                'center'
+                        }
+                    }
+                } catch (e) {
+                    console.error('[VIDEO] Error configuring video HTML:', e)
+                }
+                try {
+                    document.getElementsByTagName(
+                        'video',
+                    )[1].style.position = 'fixed'
+                } catch (e) {
+                    console.error('[VIDEO] Error configuring second video HTML:', e)
+                }
+            }
+                
+            function configureTilesHtml(mode: string) {
+                const isScreenSharingActive = !!document.querySelector('.dzMPxf .z1gyye')
+                console.log('[TILES] Screen sharing is active: ', isScreenSharingActive)
+                const firstIndex = 0
+                try {
+                    const video = document.getElementsByTagName(
+                        'video',
+                    )[firstIndex] as HTMLVideoElement
+                    if (video) {
+                        console.log('[TILES] Configuring first video HTML by getElementsByTagName')
+                        video.style.position = 'fixed'
+                        video.style.display = 'block'
+                        video.style.left = '0'
+                        video.style.top = '0'
+                        video.style.zIndex = '1'
+                        video.style.width = '100vw'
+                        video.style.height = '100vh'
+                        if (video?.parentElement?.style) {
+                            video.parentElement.style.background = '#000'
+                            video.parentElement.style.top = '0'
+                            video.parentElement.style.left = '0'
+                            video.parentElement.style.width = '100vw'
+                            video.parentElement.style.height = '100vh'
+                            video.parentElement.style.position = 'fixed'
+                            video.parentElement.style.display = 'flex'
+                            video.parentElement.style.alignItems = 'center'
+                            video.parentElement.style.justifyContent =
+                                'center'
+                        }
+                    }
+                } catch (e) {
+                    console.error('[TILES] Error configuring first video HTML:', e)
+                }
+                try {
+                    const tiles = document.querySelectorAll('.dkjMxf')
+                    Array.from(tiles).forEach((tile: Element, index: number) => {
+                        const tileHasFixedSpeakerVideoClass = tile.classList.contains('fixed-speaker-video')
+                        if (tile instanceof HTMLElement && index !== firstIndex && !tileHasFixedSpeakerVideoClass) {
+                            tile.style.opacity = '0'
+                            tile.style.background = 'transparent'
+                            tile.style.removeProperty('left')
+                        }
+                    })
+                } catch (e) {
+                    console.error('[TILES] Error configuring tiles HTML:', e)
+                }
+                try {
+                    let secondVideo = document.getElementsByTagName(
+                        'video',
+                    )[1] as HTMLVideoElement
+                    if (secondVideo) {
+                        console.log('[TILES] Configuring second video HTML by getElementsByTagName')
+                        secondVideo.style.position = 'fixed'
+                        secondVideo.style.display = 'block'
+                        secondVideo.style.left = '0'
+                        secondVideo.style.top = '0'
+                        secondVideo.style.zIndex = '1'
+                        secondVideo.style.width = '100vw'
+                        secondVideo.style.height = '100vh'
+                    } else {
+                        secondVideo = document.querySelectorAll(
                             'video',
-                        )[0] as HTMLVideoElement
-                        if (video) {
-                            video.style.position = 'fixed'
-                            video.style.display = 'block'
-                            video.style.left = '0'
-                            video.style.top = '0'
-                            video.style.zIndex = '1'
-                            if (video?.parentElement?.style) {
-                                video.parentElement.style.background = '#000'
-                                video.parentElement.style.top = '0'
-                                video.parentElement.style.left = '0'
-                                video.parentElement.style.width = '100vw'
-                                video.parentElement.style.height = '100vh'
-                                video.parentElement.style.position = 'fixed'
-                                video.parentElement.style.display = 'flex'
-                                video.parentElement.style.alignItems = 'center'
-                                video.parentElement.style.justifyContent =
-                                    'center'
-                            }
+                        )[1] as HTMLVideoElement
+                        if (secondVideo) {
+                            console.log('[TILES] Configuring second video HTML by query selector')
+                            secondVideo.style.position = 'fixed'
+                            secondVideo.style.display = 'block'
+                            secondVideo.style.left = '0'
+                            secondVideo.style.top = '0'
+                            secondVideo.style.zIndex = '1'
+                            secondVideo.style.width = '100vw'
+                            secondVideo.style.height = '100vh'
                         }
-                    } catch (e) { }
-                    try {
-                        if (mode === 'fixing_participant') {
-                            const firstIndex = 0
-                            const tiles = document.querySelectorAll('.dkjMxf')
-                            Array.from(tiles).forEach((tile: Element, index: number) => {
-                                const tileHasFixedSpeakerVideoClass = tile.classList.contains('fixed-speaker-video')
-                                if (tile instanceof HTMLElement && index !== firstIndex && !tileHasFixedSpeakerVideoClass) {
-                                    tile.style.opacity = '0'
-                                    tile.style.background = 'transparent'
-                                    tile.style.removeProperty('left')
-                                    tile.style.right = '20px'
-                                }
-                            })
-                        } else {
-                            document.getElementsByTagName(
-                                'video',
-                            )[1].style.position = 'fixed'   
-                        }
-                    } catch (e) { }
+                    }
+                    if (!secondVideo) {
+                        console.error('[TILES] Second video not found')
+                    }
+                } catch (e) {
+                    console.error('[TILES] Error configuring second video HTML:', e)
+                }
+            }
+
+            function removeShityHtml(mode: string) {
+                if (mode === 'fixing_participant') {
+                    configureTilesHtml(mode)
+                } else if (mode !== 'gallery_view') {
+                    configureVideoHtml(mode)
                 }
 
                 try {
@@ -423,6 +506,7 @@ export class MeetHtmlCleaner {
                             element.style.opacity = '0'
                             element.style.border = 'transparent'
                         }
+                    
                     }
                 })
             }
