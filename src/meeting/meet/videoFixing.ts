@@ -50,7 +50,5 @@ export async function removeAllFixedVideoClasses(page: Page): Promise<void> {
             element.classList.remove('fixed-speaker-video');
             (element as HTMLElement).style.opacity = '0';
         })
-        if (fixedElements.length > 0) {
-        }
     })
 }
