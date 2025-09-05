@@ -30,7 +30,6 @@ export async function uploadTranscriptTask(
 ): Promise<void> {
     Logger.withFunctionName('uploadTranscriptTask')
     if (GLOBAL.isServerless()) {
-        Logger.info('Skipping transcript upload - serverless mode')
         return
     }
     if (speaker.timestamp === null || speaker.timestamp === undefined) {
