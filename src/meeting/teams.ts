@@ -517,7 +517,7 @@ async function clickWithInnerText(
             )
         } catch (e) {
             if (i === iterations - 1) {
-                Logger.error(`Error in clickWithInnerText (last attempt):`, { error: e })
+                Logger.warn(`Error in clickWithInnerText (last attempt):`, { error: e })
             }
             continueButton = false
         }

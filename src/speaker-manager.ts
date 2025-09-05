@@ -59,7 +59,9 @@ export class SpeakerManager {
 
     private async logSpeakers(speakers: SpeakerData[]): Promise<void> {
         Logger.withFunctionName('logSpeakers')
-        console.table(speakers)
+        if (process.env.NODE_ENV === 'local') {
+            console.table(speakers)
+        }
 
         // Add current speakers data to the accumulated log
         this.speakerLog.push(speakers)

@@ -44,9 +44,11 @@ export class TeamsSpeakersObserver {
             'teamsSpekersChanged',
             async (speakers: SpeakerData[]) => {
                 try {
-                    Logger.info(
-                        `[Teams] CALLBACK RECEIVED: ${speakers.length} speakers from browser`,
-                    )
+                    if (process.env.NODE_ENV === 'local') {
+                        Logger.info(
+                            `[Teams] CALLBACK RECEIVED: ${speakers.length} speakers from browser`,
+                        )
+                    }
                     this.onSpeakersChange(speakers)
                 } catch (error) {
                     Logger.error(
