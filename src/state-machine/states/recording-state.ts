@@ -372,7 +372,7 @@ export class RecordingState extends BaseState {
             )
         } else {
             // Log progress periodically
-            if (silenceDurationSeconds % 60 < this.CHECK_INTERVAL) {
+            if (silenceDurationSeconds > 0 && silenceDurationSeconds % 60 === 0) {
                 // Log every minute
                 Logger.info(
                     `[checkNoSpeaker] No speaker detected for ${silenceDurationSeconds}s / ${MEETING_CONSTANTS.SILENCE_TIMEOUT / 1000}s`,
