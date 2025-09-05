@@ -839,9 +839,6 @@ export class ScreenRecorder extends EventEmitter {
             rawAudioPath,
             rawVideoPath,
         )
-        console.log(
-            `🎯 Calculated sync offset: ${syncResult.offsetSeconds.toFixed(3)}s`,
-        )
         const hasMeetingStartTime = this.meetingStartTime > 0
 
         // 2. Check if meetingStartTime is properly set - if not, bot was not accepted

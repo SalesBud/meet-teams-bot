@@ -185,13 +185,14 @@ export class MeetProvider implements MeetingProviderInterface {
 
             // Wait to be in the meeting with regular cancelCheck verification
             Logger.info('Waiting to confirm meeting join...')
+            let count = 0
             while (true) {
                 if (cancelCheck()) {
                     GLOBAL.setError(MeetingEndReason.ApiRequest)
                     throw new Error('API request to stop recording')
                 }
 
-                if (await isInMeeting(page)) {
+                if (await isInMeeting(page, count)) {
                     Logger.info('Successfully confirmed we are in the meeting')
                     onJoinSuccess()
                     break
@@ -202,6 +203,7 @@ export class MeetProvider implements MeetingProviderInterface {
                 }
 
                 await sleep(1000)
+                count++
             }
 
             // Once in the meeting, execute all post-join actions
@@ -313,7 +315,7 @@ async function findShowEveryOne(
     while (!showEveryOneFound) {
         try {
             // Check if we are actually in the meeting
-            inMeetingConfirmed = await isInMeeting(page)
+            inMeetingConfirmed = await isInMeeting(page, i)
             if (inMeetingConfirmed) {
                 Logger.info('Successfully confirmed we are in the meeting')
             }
@@ -371,7 +373,7 @@ async function findShowEveryOne(
 }
 
 // New function to check if we are actually in the meeting
-async function isInMeeting(page: Page): Promise<boolean> {
+async function isInMeeting(page: Page, count: number = 0): Promise<boolean> {
     try {
         // First check if we have been removed from the meeting
         if (await notAcceptedInMeeting(page)) {
@@ -400,7 +402,9 @@ async function isInMeeting(page: Page): Promise<boolean> {
         ]
 
         const confirmedIndicators = indicators.filter(Boolean).length
-        Logger.info(`Meeting presence indicators: ${confirmedIndicators}/3`)
+        if (count > 0 && count % 30 === 0) {
+            Logger.info(`Meeting presence indicators: ${confirmedIndicators}/3 - ${count}`)
+        }
 
         // We consider we are in the meeting if at least 2 indicators are present
         return confirmedIndicators >= 2
@@ -601,7 +605,7 @@ async function clickWithInnerText(
                 }
             }
         } catch (e) {
-            Logger.error(
+            Logger.warn(
                 `Error in clickWithInnerText (attempt ${i + 1}/${maxAttempts}):`,
                 { error: e },
             )

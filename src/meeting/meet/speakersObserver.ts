@@ -48,9 +48,11 @@ export class MeetSpeakersObserver {
             'meetSpeakersChanged',
             async (speakers: SpeakerData[]) => {
                 try {
-                    Logger.info(
-                        `[Meet] CALLBACK RECEIVED: ${speakers.length} speakers from browser`,
-                    )
+                    if (process.env.NODE_ENV === 'local') {
+                        Logger.info(
+                            `[Meet] CALLBACK RECEIVED: ${speakers.length} speakers from browser`,
+                        )
+                    }
                     this.onSpeakersChange(speakers)
                 } catch (error) {
                     Logger.error(

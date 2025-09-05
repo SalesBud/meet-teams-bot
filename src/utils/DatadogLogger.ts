@@ -15,7 +15,7 @@ export default class Logger {
   constructor() {
     this.serviceName = process.env.SERVICE_NAME || 'SB-BOT';
     this.environment = process.env.ENV || 'development';
-    this.isLocalEnv = this.environment === 'development';
+    this.isLocalEnv = ['development', 'local'].includes(this.environment);
 
     this.logger = this.createLoggerInstance();
   }

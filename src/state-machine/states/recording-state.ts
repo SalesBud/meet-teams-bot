@@ -180,9 +180,6 @@ export class RecordingState extends BaseState {
                 const currentSoundLevel =
                     Streaming.instance.getCurrentSoundLevel()
                 if (currentSoundLevel > SOUND_LEVEL_ACTIVITY_THRESHOLD) {
-                    console.log(
-                        `[checkEndConditions] Sound activity detected (${currentSoundLevel.toFixed(2)}), resetting all silence timers`,
-                    )
                     // Reset both silence timers when sound is detected
                     this.noAttendeesWithSilenceStartTime = 0
                     this.context.noSpeakerDetectedTime = 0
@@ -361,7 +358,7 @@ export class RecordingState extends BaseState {
             )
         } else {
             // Log progress periodically
-            if (silenceDuration % 60000 < this.CHECK_INTERVAL) {
+            if (silenceDuration > 0 && silenceDuration % 60 === 0) {
                 // Log every minute
                 Logger.info(
                     `[checkNoSpeaker] No speaker detected for ${silenceDuration}s / ${MEETING_CONSTANTS.SILENCE_TIMEOUT / 1000}s`,

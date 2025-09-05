@@ -104,10 +104,6 @@ export class Streaming {
         // Log stats periodically
         const now = Date.now()
         if (now - this.lastStatsLogTime >= this.STATS_LOG_INTERVAL_MS) {
-            const packetsInInterval = this.audioPacketsReceived
-            Logger.info(
-                `Direct audio packets processed: ${packetsInInterval} in last ${this.STATS_LOG_INTERVAL_MS}ms`,
-            )
             this.audioPacketsReceived = 0
             this.lastStatsLogTime = now
         }
