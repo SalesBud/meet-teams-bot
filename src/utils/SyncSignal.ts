@@ -35,7 +35,7 @@ export async function generateSyncSignal(
     } = options
 
     Logger.info(
-        `🎯 Generating sync signal: ${frequency}Hz beep + flash (${duration}ms)`,
+        `Generating sync signal: ${frequency}Hz beep + flash (${duration}ms)`,
     )
 
     try {
@@ -44,10 +44,8 @@ export async function generateSyncSignal(
             generateAudioBeep(page, frequency, duration, volume),
             generateVisualFlash(page, flashColor, duration),
         ])
-
-        Logger.info('✅ Sync signal generated successfully')
     } catch (error) {
-        Logger.error('❌ Failed to generate sync signal:', { error })
+        Logger.error('Failed to generate sync signal:', { error })
         throw error
     }
 }
@@ -61,7 +59,6 @@ async function generateAudioBeep(
     duration: number,
     volume: number,
 ): Promise<void> {
-    Logger.withFunctionName('generateAudioBeep')
     await page.evaluate(
         ({ freq, dur, vol }) => {
             if ((window as any).__syncAudioContext) {
@@ -136,7 +133,6 @@ async function generateVisualFlash(
     color: string,
     duration: number,
 ): Promise<void> {
-    Logger.withFunctionName('generateVisualFlash')
     await page.evaluate(
         ({ flashColor, dur }) => {
             if (document.querySelector('#sync-flash-overlay')) {
