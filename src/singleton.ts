@@ -4,6 +4,7 @@ import {
     MeetingEndReason,
 } from './state-machine/types'
 import { MeetingParams, RecordingMode, SpeechToTextProvider } from './types'
+import Logger from './utils/DatadogLogger'
 
 class Global {
     private meetingParams: MeetingParams | null = null
@@ -97,7 +98,7 @@ class Global {
             email: process.env.EMAIL || 'bot@example.com'
         }
 
-        console.log(`BOT_ID: ${botUuid}`)
+        Logger.info(`BOT_ID: ${botUuid}`)
     }
 
     public get(): MeetingParams {
@@ -117,7 +118,7 @@ class Global {
             this.endReason === MeetingEndReason.ApiRequest ||
             this.endReason === MeetingEndReason.LoginRequired
         ) {
-            console.log(
+            Logger.warn(
                 `not setting global error, already set to: ${this.endReason}`,
             )
             return
@@ -130,24 +131,24 @@ class Global {
             this.errorMessage &&
             this.errorMessage !== getErrorMessageFromCode(reason)
         ) {
-            console.log(
+            Logger.warn(
                 `Preserving existing custom error message for ${reason}: "${this.errorMessage}"`,
             )
             return
         }
 
-        console.log(`Setting global error: ${reason}`)
         this.endReason = reason
         this.errorMessage = message || getErrorMessageFromCode(reason)
-        console.warn(`End reason set to: ${this.endReason}`)
+        Logger.warn(`End reason set to: ${this.endReason}`)
     }
 
     public setEndReason(reason: MeetingEndReason): void {
-        console.log(`Setting global end reason: ${reason}`)
+        Logger.withFunctionName('setEndReason')
+        Logger.info(`Setting global end reason: ${reason}`)
         this.endReason = reason
 
         if (NORMAL_END_REASONS.includes(reason)) {
-            console.log(`Clearing error state for normal termination: ${reason}`)
+            Logger.info(`Clearing error state for normal termination: ${reason}`)
             // This ensures that an error message isn't propagated to the client for normal termination
             this.clearError()
         }

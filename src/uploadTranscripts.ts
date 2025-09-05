@@ -3,6 +3,7 @@ import { ApiTypes } from './api/types'
 import { GLOBAL } from './singleton'
 import { MeetingStateMachine } from './state-machine/machine'
 import { SpeakerData } from './types'
+import Logger from './utils/DatadogLogger'
 
 import * as asyncLib from 'async'
 
@@ -27,12 +28,13 @@ export async function uploadTranscriptTask(
     speaker: SpeakerData,
     end: boolean,
 ): Promise<void> {
+    Logger.withFunctionName('uploadTranscriptTask')
     if (GLOBAL.isServerless()) {
-        console.log('Skipping transcript upload - serverless mode')
+        Logger.info('Skipping transcript upload - serverless mode')
         return
     }
     if (speaker.timestamp === null || speaker.timestamp === undefined) {
-        console.log('Skipping transcript upload - timestamps not yet available')
+        Logger.info('Skipping transcript upload - timestamps not yet available')
         return
     }
 
@@ -49,17 +51,18 @@ export async function uploadTranscriptTask(
 }
 
 async function upload(speaker: SpeakerData, end: boolean) {
+    Logger.withFunctionName('upload')
     if (!process.env.API_SERVER_BASEURL) {
-        console.log('Skipping transcript upload - no API server baseurl')
+        Logger.info('Skipping transcript upload - no API server baseurl')
         return
     }
     if (TRANSCIBER_STOPED) {
-        console.info('Transcriber is stoped')
+        Logger.info('Transcriber is stoped')
         return
     }
     const meetingStartTime = MeetingStateMachine.instance.getStartTime()
     if (meetingStartTime == null || meetingStartTime == undefined) {
-        console.warn(
+        Logger.warn(
             'Meeting start time not available for posting transcript - skipping',
         )
         return
@@ -74,9 +77,9 @@ async function upload(speaker: SpeakerData, end: boolean) {
                     end_time: (speaker.timestamp - meetingStartTime) / 1000,
                 } as ApiTypes.ChangeableTranscript)
             } catch (e) {
-                console.error(
+                Logger.warn(
                     'Failed to patch transcript, continuing execution:',
-                    e,
+                    { error: e },
                 )
                 // Continue execution despite error
             }
@@ -89,7 +92,7 @@ async function upload(speaker: SpeakerData, end: boolean) {
         } else {
             try {
                 if (meetingStartTime == null || meetingStartTime == undefined) {
-                    console.warn(
+                    Logger.warn(
                         'Meeting start time not available for posting transcript - skipping',
                     )
                     return
@@ -100,17 +103,17 @@ async function upload(speaker: SpeakerData, end: boolean) {
                     start_time: (speaker.timestamp - meetingStartTime) / 1000,
                 } as ApiTypes.PostableTranscript)
             } catch (e) {
-                console.error(
+                Logger.warn(
                     'Failed to post transcript, continuing execution:',
-                    e,
+                    { error: e },
                 )
                 // Continue execution despite error
             }
         }
     } catch (e) {
-        console.error(
+        Logger.warn(
             'Unexpected error in transcript upload, continuing execution:',
-            e,
+            { error: e },
         )
         // Continue execution despite any errors
     }

@@ -2,6 +2,7 @@ import * as fs from 'fs'
 
 import { MeetingStateMachine } from './state-machine/machine'
 import { Streaming } from './streaming'
+import Logger from './utils/DatadogLogger'
 
 import { ParticipantState } from './state-machine/types'
 import { SpeakerData } from './types'
@@ -30,6 +31,7 @@ export class SpeakerManager {
     }
 
     public async handleSpeakerUpdate(speakers: SpeakerData[]): Promise<void> {
+        Logger.withFunctionName('handleSpeakerUpdate')
         try {
             // Send the speaker state to the streaming service only if RECORDING is enabled
             if (Streaming.instance) {
@@ -47,15 +49,16 @@ export class SpeakerManager {
             // Handle the speaker transcription
             await this.handleSpeakersTranscription(speakers, speakersCount)
         } catch (error) {
-            console.error(
-                '[SpeakerManager] ❌ Error handling speaker update:',
-                error,
+            Logger.error(
+                '[SpeakerManager] Error handling speaker update:',
+                { error },
             )
             throw error
         }
     }
 
     private async logSpeakers(speakers: SpeakerData[]): Promise<void> {
+        Logger.withFunctionName('logSpeakers')
         console.table(speakers)
 
         // Add current speakers data to the accumulated log
@@ -69,7 +72,7 @@ export class SpeakerManager {
                 jsonOutput,
             )
             .catch((e) => {
-                console.error('Cannot write speaker log file:', e)
+                Logger.error('Cannot write speaker log file:', { error: e })
             })
     }
 

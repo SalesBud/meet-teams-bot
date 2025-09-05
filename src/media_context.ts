@@ -1,5 +1,6 @@
 import { ChildProcess, spawn } from 'child_process'
 import internal from 'stream'
+import Logger from './utils/DatadogLogger'
 
 // sudo apt install linux-modules-extra-`uname -r`
 // The env variable VIRTUAL_MIC is used to set the virtual mic name. It needs to be prefixed with 'pulse:'
@@ -30,8 +31,9 @@ abstract class MediaContext {
         args: string[],
         after: { (): void },
     ): ChildProcess | null {
+        Logger.withFunctionName('execute')
         if (this.process) {
-            console.warn('Already on execution')
+            Logger.warn('Already on execution')
             return null
         }
 
@@ -40,7 +42,7 @@ abstract class MediaContext {
         })
         this.promise = new Promise((resolve, reject) => {
             this.process.on('exit', (code) => {
-                console.log(`process exited with code ${code}`)
+                Logger.info(`process exited with code ${code}`)
                 if (code == 0) {
                     this.process = null
                     after()
@@ -48,7 +50,7 @@ abstract class MediaContext {
                 resolve(code)
             })
             this.process.on('error', (err) => {
-                console.error(err)
+                Logger.error('FFmpeg process error:', { error: err })
                 reject(err)
             })
 
@@ -64,20 +66,21 @@ abstract class MediaContext {
     }
 
     protected async stop_process() {
+        Logger.withFunctionName('stop_process')
         if (!this.process) {
-            console.warn('Already stoped')
+            Logger.warn('Already stoped')
             return
         }
 
         let res = this.process.kill('SIGTERM')
-        console.log(`Signal sended to process : ${res}`)
+        Logger.info(`Signal sended to process : ${res}`)
 
         await this.promise
             .then((code) => {
-                console.log(`process exited with code ${code}`)
+                Logger.info(`process exited with code ${code}`)
             })
             .catch((err) => {
-                console.log(`process exited with error ${err}`)
+                Logger.info(`process exited with error ${err}`)
             })
             .finally(() => {
                 this.process = null
@@ -145,7 +148,7 @@ export class SoundContext extends MediaContext {
             MICRO_DEVICE,
         )
         return super.execute(args, () => {
-            console.warn(`[play_stdin] Sequence ended`)
+            Logger.warn(`[play_stdin] Sequence ended`)
         }).stdin
     }
 
