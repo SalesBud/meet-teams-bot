@@ -1,8 +1,8 @@
 import type { Locator, Page } from '@playwright/test'
 import { GLOBAL } from '../../singleton'
 import { MeetingContext } from '../../state-machine/types'
-import { DialogObserverResult } from './types'
 import { HtmlSnapshotService } from '../html-snapshot-service'
+import { DialogObserverResult } from './types'
 
 interface DismissTimeouts {
     VISIBLE_TIMEOUT: number
@@ -121,6 +121,13 @@ export class SimpleDialogObserver {
         try {
             // Google Meet specific modal patterns
             const modalPatterns = [
+                // Transcription/notes modal
+                {
+                    name: 'gemini_notification',
+                    selector:
+                        'div[role="dialog"]:has-text("Gemini"):has-text("taking notes"):has(button)',
+                    buttonTexts: ['Join now'],
+                },
                 // Privacy/notification modals
                 {
                     name: 'privacy_notification',
@@ -148,6 +155,13 @@ export class SimpleDialogObserver {
                     selector:
                         'div[role="dialog"]:has-text("background"):has(button), div[role="dialog"]:has-text("feed"):has(button)',
                     buttonTexts: ['Got it', 'OK', 'Dismiss'],
+                },
+                // Recording notification modal
+                {
+                    name: 'recording_notification',
+                    selector:
+                        'div[role="dialog"]:has-text("video call is being recorded"):has(button)',
+                    buttonTexts: ['Join now'],
                 },
                 // Generic dismiss modals (fallback)
                 {
@@ -180,7 +194,10 @@ export class SimpleDialogObserver {
 
                     // Capture DOM state before attempting to dismiss modal
                     const htmlSnapshot = HtmlSnapshotService.getInstance()
-                    await htmlSnapshot.captureSnapshot(page,  `dialog_observer_before_dismiss_attempt_${pattern.name}`)
+                    await htmlSnapshot.captureSnapshot(
+                        page,
+                        `dialog_observer_before_dismiss_attempt_${pattern.name}`,
+                    )
 
                     // Try to dismiss the modal by clicking appropriate buttons
                     const dismissed = await this.tryDismissModal(

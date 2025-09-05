@@ -1,13 +1,13 @@
 import { BrowserContext, Page } from '@playwright/test'
 
 import { MeetingEndReason } from '../state-machine/types'
-import { MeetingProviderInterface, normalizeRecordingMode } from '../types'
+import { MeetingProviderInterface } from '../types'
 
+import { HtmlSnapshotService } from '../services/html-snapshot-service'
 import { GLOBAL } from '../singleton'
 import { parseMeetingUrlFromJoinInfos } from '../urlParser/meetUrlParser'
 import { sleep } from '../utils/sleep'
 import { closeMeeting } from './meet/closeMeeting'
-import { HtmlSnapshotService } from '../services/html-snapshot-service'
 
 export class MeetProvider implements MeetingProviderInterface {
     async parseMeetingUrl(meeting_url: string) {
@@ -195,7 +195,6 @@ export class MeetProvider implements MeetingProviderInterface {
                 }
 
                 if (await notAcceptedInMeeting(page)) {
-                    GLOBAL.setError(MeetingEndReason.BotNotAccepted)
                     throw new Error('Bot not accepted into meeting')
                 }
 
@@ -216,7 +215,7 @@ export class MeetProvider implements MeetingProviderInterface {
 
             await clickOutsideModal(page)
             const maxAttempts = 3
-            if (normalizeRecordingMode(GLOBAL.get().recording_mode) !== 'audio_only') {
+            if (GLOBAL.get().recording_mode !== 'audio_only') {
                 // Capture DOM state before layout change attempts
                 await htmlSnapshot.captureSnapshot(page, 'meet_layout_change_before_attempts')
 
@@ -233,7 +232,7 @@ export class MeetProvider implements MeetingProviderInterface {
                 }
             }
 
-            if (normalizeRecordingMode(GLOBAL.get().recording_mode) !== 'gallery_view') {
+            if (GLOBAL.get().recording_mode !== 'gallery_view') {
                 // Capture DOM state before opening people panel
                 await htmlSnapshot.captureSnapshot(page, 'meet_people_panel_before_open')
                 
@@ -354,7 +353,6 @@ async function findShowEveryOne(
 
             if (await notAcceptedInMeeting(page)) {
                 console.log('Bot not accepted, exiting meeting')
-                GLOBAL.setError(MeetingEndReason.BotNotAccepted)
                 throw new Error('Bot not accepted into meeting')
             }
 
@@ -458,16 +456,52 @@ async function sendEntryMessage(
 }
 
 async function notAcceptedInMeeting(page: Page): Promise<boolean> {
+    // Generic user-denied entry texts
     const deniedTexts = [
         'denied',
         "You've been removed",
         'we encountered a problem joining',
         "You can't join",
+        "You left the meeting" // Happens if the bot first entered in the waiting room of the meeting (not the entry page) and then it was denied entry
     ]
 
+    // Google Meet itself has denied entry
+    const googleMeetDeniedTexts = [
+        "You can't join this video call"
+    ]
+
+    // Google Meet has its own timeout which would deny entry into the meeting after ~10 minutes
+    const timeoutTextsFromGoogle = [
+        "No one responded to your request to join the call"
+    ]
+
+    // Check for Google Meet denied texts first since the message overlaps with the user denied entry message
+    for (const text of googleMeetDeniedTexts) {
+        const element = page.locator(`text=${text}`)
+        if ((await element.count()) > 0) {
+            // Google Meet itself has denied entry
+            console.log('XXXXXXXXXXXXXXXXXX Google Meet itself has denied entry')
+            GLOBAL.setError(MeetingEndReason.BotNotAccepted, "Google Meet has denied entry")
+            return true
+        }
+    }
+
+    // Check for Google Meet timeout texts
+    for (const text of timeoutTextsFromGoogle) {
+        const element = page.locator(`text=${text}`)
+        if ((await element.count()) > 0) {
+            // Google Meet itself has timed out
+            console.log('XXXXXXXXXXXXXXXXXX Google Meet itself has timed out')
+            GLOBAL.setError(MeetingEndReason.TimeoutWaitingToStart, "Google Meet has timed out while waiting for the bot to join the meeting")
+            return true
+        }
+    }
+
+    // Check for user denied entry texts
     for (const text of deniedTexts) {
         const element = page.locator(`text=${text}`)
         if ((await element.count()) > 0) {
+            // User has denied entry
             console.log('XXXXXXXXXXXXXXXXXX User has denied entry')
             GLOBAL.setError(MeetingEndReason.BotNotAccepted)
             return true
