@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test'
 import { RecordingMode, SpeakerData } from '../../types'
 import { HtmlSnapshotService } from '../../services/html-snapshot-service'
+import Logger from '../../utils/DatadogLogger'
 
 export class MeetSpeakersObserver {
     private page: Page
@@ -30,12 +31,12 @@ export class MeetSpeakersObserver {
     }
 
     public async startObserving(): Promise<void> {
+        Logger.withFunctionName('startObserving')
         if (this.isObserving) {
-            console.warn('[Meet] Already observing')
             return
         }
 
-        console.log('[Meet] Starting speaker observation...')
+        Logger.info('[Meet] Starting speaker observation...')
 
         // Browser console logs are handled by centralized page-logger in base-state.ts
 
@@ -47,15 +48,14 @@ export class MeetSpeakersObserver {
             'meetSpeakersChanged',
             async (speakers: SpeakerData[]) => {
                 try {
-                    console.log(
-                        `[Meet] 🗣️ CALLBACK RECEIVED: ${speakers.length} speakers from browser`,
+                    Logger.info(
+                        `[Meet] CALLBACK RECEIVED: ${speakers.length} speakers from browser`,
                     )
                     this.onSpeakersChange(speakers)
-                    // console.log(`[Meet] ✅ onSpeakersChange callback completed`)
                 } catch (error) {
-                    console.error(
-                        '[Meet] ❌ Error in speakers callback:',
-                        error,
+                    Logger.error(
+                        '[Meet] Error in speakers callback:',
+                        { error },
                     )
                 }
             },
@@ -753,7 +753,6 @@ export class MeetSpeakersObserver {
         )
 
         this.isObserving = true
-        console.log('[Meet] ✅ Observer started successfully')
 
         // Capture DOM state after Speakers Observer is started
         const htmlSnapshot = HtmlSnapshotService.getInstance()
@@ -764,11 +763,11 @@ export class MeetSpeakersObserver {
     }
 
     public stopObserving(): void {
+        Logger.withFunctionName('stopObserving')
         if (!this.isObserving) {
             return
         }
 
-        console.log('[Meet] Stopping observation...')
 
         this.page
             ?.evaluate(() => {
@@ -776,13 +775,13 @@ export class MeetSpeakersObserver {
                     ;(window as any).meetObserverCleanup()
                 }
             })
-            .catch((e) => console.error('[Meet] Error cleaning up:', e))
+            .catch((e) => Logger.error('[Meet] Error cleaning up:', { error: e }))
 
         this.isObserving = false
-        console.log('[Meet] ✅ Observer stopped')
     }
 
     private async ensurePeoplePanelOpen(): Promise<void> {
+        Logger.withFunctionName('ensurePeoplePanelOpen')
         try {
             await this.page.evaluate(() => {
                 // Check if People panel is already open
@@ -846,7 +845,7 @@ export class MeetSpeakersObserver {
                 )
             })
         } catch (error) {
-            console.warn('[Meet] Failed to ensure people panel is open:', error)
+            Logger.warn('[Meet] Failed to ensure people panel is open:', { error })
         }
     }
 }

@@ -8,13 +8,15 @@ import {
 import { ApiTypes } from './types'
 
 import { GLOBAL } from '../singleton'
+import Logger from '../utils/DatadogLogger'
 
 export class Api {
     public static instance: Api | null = null // Singleton class
 
     constructor() {
+        Logger.withFunctionName('API - constructor')
         if (Api.instance instanceof Api) {
-            console.error(
+            Logger.error(
                 'Class is singleton, constructor cannot be called multiple times.',
             )
             return Api.instance
@@ -51,15 +53,16 @@ export class Api {
     }
 
     private onRetryAttempt(err: any) {
+        Logger.withFunctionName('onRetryAttempt')
         const cfg = rax.getConfig(err)
         const response =
             err.response && err.response.data ? err.response.data : err
         const request = err.request
 
-        console.log(
+        Logger.info(
             'Attempt of a new trial #',
-            cfg && cfg.currentRetryAttempt,
             {
+                attempt: cfg && cfg.currentRetryAttempt,
                 url: request.url,
                 method: request.method,
                 params: request.params,
@@ -134,29 +137,28 @@ export class Api {
                 },
                 params: { bot_uuid: GLOBAL.get().bot_uuid },
             })
-            console.log('Successfully notified backend of recording failure')
         } catch (error) {
-            console.warn(
+            Logger.warn(
                 'Unable to notify recording failure (continuing execution):',
-                error instanceof Error ? error.message : error,
+                { error: error instanceof Error ? error.message : error },
             )
         }
     }
 
     // Handle end meeting with retry logic
     public async handleEndMeetingWithRetry(): Promise<void> {
+        Logger.withFunctionName('handleEndMeetingWithRetry')
         if (GLOBAL.isServerless() || !process.env.API_SERVER_BASEURL) {
-            console.log('Skipping endMeetingTrampoline - serverless mode')
+            Logger.info('Skipping endMeetingTrampoline - serverless mode')
             return
         }
 
         try {
             await this.endMeetingTrampoline()
-            console.log('API call to endMeetingTrampoline succeeded')
         } catch (error) {
-            console.warn(
+            Logger.warn(
                 'API call to endMeetingTrampoline failed (continuing execution):',
-                error instanceof Error ? error.message : error,
+                { error: error instanceof Error ? error.message : error },
             )
             // Don't throw - continue execution even if API call fails
         }

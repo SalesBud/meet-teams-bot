@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test'
 import { RecordingMode } from '../../types'
 import { HtmlSnapshotService } from '../../services/html-snapshot-service'
+import Logger from '../../utils/DatadogLogger'
 
 export class TeamsHtmlCleaner {
     private page: Page
@@ -12,8 +13,6 @@ export class TeamsHtmlCleaner {
     }
 
     public async start(): Promise<void> {
-        console.log('[Teams] Starting HTML cleaner')
-
         // Capture DOM state before starting Teams HTML cleaning
         const htmlSnapshot = HtmlSnapshotService.getInstance()
         await htmlSnapshot.captureSnapshot(this.page, 'teams_html_cleaner_before_cleaning')
@@ -150,7 +149,7 @@ export class TeamsHtmlCleaner {
             }
 
             // Execute Teams provider
-            console.log('[Teams] Executing HTML provider')
+            Logger.info('[Teams] Executing HTML provider')
             await removeInitialShityHtml()
 
             // Setup continuous cleanup
@@ -166,12 +165,12 @@ export class TeamsHtmlCleaner {
             }
 
             ;(window as any).htmlCleanerObserver = observer
-            console.log('[Teams] HTML provider complete')
+            Logger.info('[Teams] HTML provider complete')
         }, this.recordingMode)
     }
 
     public async stop(): Promise<void> {
-        console.log('[Teams] Stopping HTML cleaner')
+        Logger.withFunctionName('stop')
 
         await this.page
             .evaluate(() => {
@@ -180,8 +179,6 @@ export class TeamsHtmlCleaner {
                     delete (window as any).htmlCleanerObserver
                 }
             })
-            .catch((e) => console.error('[Teams] HTML cleaner stop error:', e))
-
-        console.log('[Teams] HTML cleaner stopped')
+            .catch((e) => Logger.error('[Teams] HTML cleaner stop error:', { error: e }))
     }
 }
