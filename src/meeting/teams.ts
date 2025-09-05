@@ -7,9 +7,10 @@ import { HtmlSnapshotService } from '../services/html-snapshot-service'
 import { GLOBAL } from '../singleton'
 import { parseMeetingUrlFromJoinInfos } from '../urlParser/teamsUrlParser'
 import { sleep } from '../utils/sleep'
+import Logger from '../utils/DatadogLogger'
 
 export class TeamsProvider implements MeetingProviderInterface {
-    constructor() {}
+    constructor() { }
     async parseMeetingUrl(meeting_url: string) {
         return parseMeetingUrlFromJoinInfos(meeting_url)
     }
@@ -74,8 +75,8 @@ export class TeamsProvider implements MeetingProviderInterface {
             if (isLightInterface && attempts < 3) {
                 // Limit retries to 3
                 await page.close()
-                console.log(
-                    `🥕 Light interface detected, retry ${attempts + 1}/3`,
+                Logger.info(
+                    `Light interface detected, retry ${attempts + 1}/3`,
                 )
                 await sleep(500) // Reduced wait time
                 return await this.openMeetingPage(
@@ -85,14 +86,14 @@ export class TeamsProvider implements MeetingProviderInterface {
                     attempts + 1,
                 )
             } else if (isLightInterface && attempts >= 3) {
-                console.log(
-                    '🥕 Light interface persists after 3 retries, continuing anyway',
+                Logger.warn(
+                    'Light interface persists after 3 retries, continuing anyway',
                 )
             }
 
             return page
         } catch (error) {
-            console.error('Error in openMeetingPage:', error)
+            Logger.error('Error in openMeetingPage:', { error })
             throw error
         }
     }
@@ -102,7 +103,7 @@ export class TeamsProvider implements MeetingProviderInterface {
         cancelCheck: () => boolean,
         onJoinSuccess: () => void,
     ): Promise<void> {
-        console.log('joining meeting')
+        Logger.withFunctionName('joinMeeting')
 
         // Capture DOM state before starting Teams join process
         const htmlSnapshot = HtmlSnapshotService.getInstance()
@@ -111,7 +112,7 @@ export class TeamsProvider implements MeetingProviderInterface {
         try {
             await ensurePageLoaded(page)
         } catch (error) {
-            console.error('Page load failed:', error)
+            Logger.error('Page load failed:', { error })
             throw new Error('Page failed to load - retrying')
         }
 
@@ -161,12 +162,10 @@ export class TeamsProvider implements MeetingProviderInterface {
                         3,
                         true,
                     )
-                    console.log('✅ Clicked "Continue on this browser"')
                     break
                 }
 
                 if (joinNow) {
-                    console.log('✅ Already at Join screen')
                     break
                 }
 
@@ -178,19 +177,18 @@ export class TeamsProvider implements MeetingProviderInterface {
                         3,
                         true,
                     )
-                    console.log('✅ Clicked "Continue without audio"')
                     // Don't break immediately - sometimes there are multiple steps
                     await sleep(1000)
                 }
 
                 if (i === 7)
-                    console.log('⏳ Still looking for Teams buttons...') // Log midway
+                    Logger.warn('Still looking for Teams buttons...') // Log midway
                 await sleep(300) // Slightly reduced wait time
             }
 
             // Extra attempts for "Continue without audio" in light interface
-            console.log(
-                '🔄 Extra attempts for "Continue without audio or video"...',
+            Logger.warn(
+                'Extra attempts for "Continue without audio or video"...',
             )
             for (let i = 0; i < 5; i++) {
                 if (cancelCheck?.()) break
@@ -208,9 +206,6 @@ export class TeamsProvider implements MeetingProviderInterface {
                     true,
                 )
                 if (found) {
-                    console.log(
-                        '✅ Successfully clicked "Continue without audio" (extra attempt)',
-                    )
                     await sleep(1000)
                     break
                 }
@@ -220,34 +215,34 @@ export class TeamsProvider implements MeetingProviderInterface {
             if (e instanceof Error && e.message === 'LoginRequired') {
                 throw e // Re-throw LoginRequired errors
             }
-            console.warn('Failed during Teams button handling:', e)
+            Logger.warn('Failed during Teams button handling:', e)
         }
 
         const currentUrl = await page.url()
         const isLightInterface = currentUrl.includes('light')
         const isLiveInterface = currentUrl.includes('live')
 
-        console.log(
+        Logger.info(
             'interface : ',
-            isLightInterface
-                ? 'light 🥕🥕'
-                : isLiveInterface
-                  ? 'live 💃🏼'
-                  : 'old 👴🏻',
-            'url: ',
-            currentUrl,
+            {
+                interface: isLightInterface
+                    ? 'light'
+                    : isLiveInterface
+                        ? 'live'
+                        : 'old'
+            },
         )
 
         try {
             await clickWithInnerText(page, 'button', 'Join now', 100, false)
         } catch (e) {
-            console.warn('Failed to find "Join now" button (first attempt):', e)
+            Logger.warn('Failed to find "Join now" button (first attempt):', { error: e })
         }
 
         // Additional attempt for "Continue without audio" in case it appears later
         try {
-            console.log(
-                '🔄 Additional attempt for "Continue without audio or video"...',
+            Logger.info(
+                'Additional attempt for "Continue without audio or video"...',
             )
             for (let i = 0; i < 3; i++) {
                 if (cancelCheck?.()) break
@@ -260,18 +255,15 @@ export class TeamsProvider implements MeetingProviderInterface {
                     true,
                 )
                 if (found) {
-                    console.log(
-                        '✅ Successfully clicked "Continue without audio" (delayed attempt)',
-                    )
                     await sleep(1000)
                     break
                 }
                 await sleep(500)
             }
         } catch (e) {
-            console.warn(
+            Logger.warn(
                 'Additional "Continue without audio" attempt failed:',
-                e,
+                { error: e },
             )
         }
 
@@ -286,9 +278,9 @@ export class TeamsProvider implements MeetingProviderInterface {
                         throw new Error('Camera timeout')
                     }),
                 ]).catch((e) =>
-                    console.warn(
+                    Logger.warn(
                         'Camera setup failed:',
-                        e instanceof Error ? e.message : e,
+                        { error: e instanceof Error ? e.message : e },
                     ),
                 )
 
@@ -302,9 +294,9 @@ export class TeamsProvider implements MeetingProviderInterface {
                     ])
                 }
             } catch (e) {
-                console.warn(
+                Logger.warn(
                     'Camera/mic setup failed, continuing:',
-                    e instanceof Error ? e.message : String(e),
+                    { error: e instanceof Error ? e.message : String(e) },
                 )
             }
         }
@@ -313,15 +305,15 @@ export class TeamsProvider implements MeetingProviderInterface {
             await typeBotName(page, GLOBAL.get().bot_name, 20)
             await clickWithInnerText(page, 'button', 'Join now', 20)
         } catch (e) {
-            console.error(
+            Logger.error(
                 'Error during bot name typing or second "Join now" click:',
-                e,
+                { error: e },
             )
             throw new Error('RetryableError')
         }
 
         // Wait to be in the meeting
-        console.log('Waiting to confirm meeting join...')
+        Logger.info('Waiting to confirm meeting join...')
         let inMeeting = false
 
         while (!inMeeting) {
@@ -346,21 +338,18 @@ export class TeamsProvider implements MeetingProviderInterface {
             }
         }
 
-        console.log('Successfully confirmed we are in the meeting')
+        Logger.info('Successfully confirmed we are in the meeting')
 
         // 🎯 CRITICAL: Notify that join was successful (fixes waiting room timeout)
         onJoinSuccess()
-        console.log(
-            '✅ onJoinSuccess callback called - no more waiting room timeout!',
-        )
 
         // Capture DOM state after successfully joining Teams meeting
         await htmlSnapshot.captureSnapshot(page, 'teams_join_meeting_success')
 
         // Check for "Continue without audio or video" that might appear AFTER joining (light interface)
         try {
-            console.log(
-                '🔄 Post-meeting check for "Continue without audio or video"...',
+            Logger.info(
+                'Post-meeting check for "Continue without audio or video"...',
             )
             for (let i = 0; i < 5; i++) {
                 if (cancelCheck?.()) break
@@ -373,18 +362,15 @@ export class TeamsProvider implements MeetingProviderInterface {
                     true,
                 )
                 if (found) {
-                    console.log(
-                        '✅ Successfully clicked post-meeting "Continue without audio"',
-                    )
                     await sleep(1500) // Give time for interface to update
                     break
                 }
                 await sleep(800)
             }
         } catch (e) {
-            console.warn(
+            Logger.warn(
                 'Post-meeting "Continue without audio" check failed:',
-                e,
+                { error: e },
             )
         }
 
@@ -403,7 +389,7 @@ export class TeamsProvider implements MeetingProviderInterface {
                 }
             }
         } catch (e) {
-            console.error('Error handling "View" or "Speaker" mode:', e)
+            Logger.error('Error handling "View" or "Speaker" mode:', { error: e })
         }
     }
 
@@ -417,7 +403,8 @@ export class TeamsProvider implements MeetingProviderInterface {
     }
 
     async closeMeeting(page: Page): Promise<void> {
-        console.log('Attempting to leave the meeting')
+        Logger.withFunctionName('closeMeeting')
+        Logger.info('Attempting to leave the meeting')
         try {
             // Try multiple approaches to find and click the leave button
 
@@ -439,7 +426,6 @@ export class TeamsProvider implements MeetingProviderInterface {
 
             // Approach 3: Try to find by text content
             if (await clickWithInnerText(page, 'button', 'Leave', 5, true)) {
-                console.log('Clicked leave button by text content')
                 return
             }
 
@@ -447,13 +433,12 @@ export class TeamsProvider implements MeetingProviderInterface {
             const leaveByRole = page.getByRole('button', { name: 'Leave' })
             if ((await leaveByRole.count()) > 0) {
                 await leaveByRole.click()
-                console.log('Clicked leave button by role and name')
                 return
             }
 
-            console.log('Could not find leave button, closing page instead')
+            Logger.warn('Could not find leave button, closing page instead')
         } catch (error) {
-            console.error('Error while trying to leave meeting:', error)
+            Logger.error('Error while trying to leave meeting:', { error })
         }
     }
 }
@@ -468,11 +453,12 @@ async function clickWithInnerText(
     click: boolean = true,
     cancelCheck?: () => boolean,
 ): Promise<boolean> {
+    Logger.withFunctionName('clickWithInnerText')
     let i = 0
     let continueButton = false
 
     if (!(await ensurePageLoaded(page))) {
-        console.error('Page is not fully loaded at the start.')
+        Logger.error('Page is not fully loaded at the start.')
         return false
     }
 
@@ -485,7 +471,7 @@ async function clickWithInnerText(
             if (i % 5 === 0) {
                 const isPageLoaded = await ensurePageLoaded(page)
                 if (!isPageLoaded) {
-                    console.error('Page seems frozen or not responding.')
+                    Logger.warn('Page seems frozen or not responding.')
                     return false
                 }
             }
@@ -507,7 +493,7 @@ async function clickWithInnerText(
                                 )
                             }
                         } catch (e) {
-                            console.warn('Iframe access error:', e)
+                            Logger.warn('Iframe access error:', { error: e })
                         }
                     }
 
@@ -520,7 +506,7 @@ async function clickWithInnerText(
                     for (const elem of elements) {
                         if (elem.textContent?.trim() === innerText) {
                             if (click) {
-                                ;(elem as HTMLElement).click()
+                                ; (elem as HTMLElement).click()
                             }
                             return true
                         }
@@ -531,7 +517,7 @@ async function clickWithInnerText(
             )
         } catch (e) {
             if (i === iterations - 1) {
-                console.error(`Error in clickWithInnerText (last attempt):`, e)
+                Logger.error(`Error in clickWithInnerText (last attempt):`, { error: e })
             }
             continueButton = false
         }
@@ -542,7 +528,7 @@ async function clickWithInnerText(
 
         // Only log if found or on final attempt
         if (continueButton || i === iterations - 1) {
-            console.log(
+            Logger.info(
                 `${innerText} ${click ? 'clicked' : 'found'} : ${continueButton}`,
             )
         }
@@ -556,6 +542,7 @@ async function typeBotName(
     botName: string,
     maxAttempts: number,
 ): Promise<void> {
+    Logger.withFunctionName('typeBotName')
     for (let i = 0; i < maxAttempts; i++) {
         try {
             await page.waitForSelector(INPUT_BOT, { timeout: 1000 })
@@ -582,18 +569,19 @@ async function typeBotName(
 
             await page.waitForTimeout(500)
         } catch (e) {
-            console.error(`Error typing bot name (attempt ${i + 1}):`, e)
+            Logger.error(`Error typing bot name (attempt ${i + 1}):`, { error: e })
         }
     }
     throw new Error('Failed to type bot name')
 }
 
 async function checkPageForText(page: Page, text: string): Promise<boolean> {
+    Logger.withFunctionName('checkPageForText')
     try {
         const content = await page.content()
         return content.includes(text)
     } catch (error) {
-        console.error('Error checking page for text:', error)
+        Logger.error('Error checking page for text:', { error })
         return false
     }
 }
@@ -619,15 +607,13 @@ async function isRemovedFromTheMeeting(page: Page): Promise<boolean> {
         )
         const buttonExists = (await raiseButton.count()) > 0
 
-        // console.log('raiseButton', JSON.stringify(raiseButton))
-        // console.log('buttonExists', JSON.stringify(buttonExists))
         if (!buttonExists) {
-            console.log('no raise button found, Bot removed from the meeting')
+            Logger.info('no raise button found, Bot removed from the meeting')
             return true
         }
         return false
     } catch (error) {
-        console.error('Error while checking meeting status:', error)
+        Logger.error('Error while checking meeting status:', { error })
         return false
     }
 }
@@ -654,22 +640,21 @@ async function isBotNotAccepted(page: Page): Promise<boolean> {
 }
 
 async function handlePermissionDialog(page: Page): Promise<void> {
-    console.log('handling permission dialog')
+    Logger.withFunctionName('handlePermissionDialog')
     try {
         const okButton = page.locator('button:has-text("OK")')
         if ((await okButton.count()) > 0) {
             await okButton.click()
-            console.log('Permission dialog handled successfully')
         } else {
-            console.log('No permission dialog found')
+            Logger.info('No permission dialog found')
         }
     } catch (error) {
-        console.error('Failed to handle permission dialog:', error)
+        Logger.warn('Failed to handle permission dialog:', { error })
     }
 }
 
 async function activateCamera(page: Page): Promise<void> {
-    console.log('activating camera')
+    Logger.withFunctionName('activateCamera')
     try {
         // Essayer d'abord l'interface normale de Teams
         const cameraOffText = page.locator('text="Your camera is turned off"')
@@ -677,13 +662,10 @@ async function activateCamera(page: Page): Promise<void> {
             const cameraButton = page.locator('button[title="Turn camera on"]')
             if ((await cameraButton.count()) > 0) {
                 await cameraButton.click()
-                console.log(
-                    'Camera button clicked successfully (normal interface)',
-                )
                 await sleep(500)
                 return
             } else {
-                console.log(
+                Logger.info(
                     'Camera button not found in normal interface, trying light interface',
                 )
             }
@@ -695,58 +677,55 @@ async function activateCamera(page: Page): Promise<void> {
         )
         if ((await lightCameraButton.count()) > 0) {
             await lightCameraButton.click()
-            console.log('Camera button clicked successfully (light interface)')
             await sleep(500)
             return
         } else {
-            console.log(
+            Logger.info(
                 'Camera is already on or button not found in both interfaces',
             )
         }
     } catch (error) {
-        console.error('Failed to activate camera:', error)
+        Logger.error('Failed to activate camera:', { error })
     }
 }
 
 async function activateMicrophone(page: Page): Promise<void> {
-    console.log('activating microphone')
+    Logger.withFunctionName('activateMicrophone')
     try {
         const micOffText = page.locator('text="Your microphone is muted"')
         if ((await micOffText.count()) > 0) {
             const micButton = page.locator('button[title="Unmute"]')
             if ((await micButton.count()) > 0) {
                 await micButton.click()
-                console.log('Microphone unmuted successfully')
                 await sleep(500)
             } else {
-                console.log('Failed to find unmute button')
+                Logger.info('Failed to find unmute button')
             }
         } else {
-            console.log('Microphone is already on or text not found')
+            Logger.info('Microphone is already on or text not found')
         }
     } catch (error) {
-        console.error('Failed to activate microphone:', error)
+        Logger.warn('Failed to activate microphone:', { error })
     }
 }
 
 async function deactivateMicrophone(page: Page): Promise<void> {
-    console.log('deactivating microphone')
+    Logger.withFunctionName('deactivateMicrophone')
     try {
         const micOnText = page.locator('text="Your microphone is on"')
         if ((await micOnText.count()) > 0) {
             const micButton = page.locator('button[title="Mute"]')
             if ((await micButton.count()) > 0) {
                 await micButton.click()
-                console.log('Microphone muted successfully')
                 await sleep(500)
             } else {
-                console.log('Failed to find mute button')
+                Logger.info('Failed to find mute button')
             }
         } else {
-            console.log('Microphone is already muted or text not found')
+            Logger.info('Microphone is already muted or text not found')
         }
     } catch (error) {
-        console.error('Failed to deactivate microphone:', error)
+        Logger.warn('Failed to deactivate microphone:', { error })
     }
 }
 
@@ -757,7 +736,7 @@ async function ensurePageLoaded(page: Page, timeout = 20000): Promise<boolean> {
         })
         return true
     } catch (error) {
-        console.error('Failed to ensure page is loaded:', error)
+        Logger.error('Failed to ensure page is loaded:', { error })
         throw new Error('RetryableError: Page load timeout')
     }
 }
@@ -787,13 +766,13 @@ async function isInTeamsMeeting(page: Page): Promise<boolean> {
         ]
 
         const confirmedIndicators = indicators.filter(Boolean).length
-        console.log(
+        Logger.info(
             `Teams meeting presence indicators: ${confirmedIndicators}/5`,
         )
 
         return confirmedIndicators >= 3
     } catch (error) {
-        console.error('Error checking if in Teams meeting:', error)
+        Logger.error('Error checking if in Teams meeting:', { error })
         return false
     }
 }

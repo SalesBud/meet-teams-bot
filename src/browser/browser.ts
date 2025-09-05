@@ -1,6 +1,7 @@
 import { BrowserContext, chromium } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
+import Logger from '../utils/DatadogLogger'
 
 export async function openBrowser(
     slowMo: boolean = false,
@@ -10,11 +11,11 @@ export async function openBrowser(
     const height = 720 // 480
 
     try {
-        console.log('Launching persistent context with exact extension args...')
+        Logger.withFunctionName('openBrowser')
+        Logger.info('Launching persistent context with exact extension args...')
 
         // Get Chrome path from environment variable or use default
         const chromePath = process.env.CHROME_PATH || '/usr/bin/google-chrome'
-        console.log(`🔍 Using Chrome path: ${chromePath}`)
 
         // Check if branding video file exists and determine best format
         const finalBrandingPath = await getBrandingPath(brandingVideoPath)
@@ -94,14 +95,13 @@ export async function openBrowser(
             timeout: 120000,
         })
 
-        console.log('✅ Chromium launched with PulseAudio configuration')
         return { browser: context }
     } catch (error) {
-        console.error('Failed to open browser:', error)
+        Logger.error('Failed to open browser:', { error })
 
         // Provide more detailed error information
         if (error instanceof Error) {
-            console.error('Error details:', {
+            Logger.error('Error details:', {
                 message: error.message,
                 stack: error.stack,
                 name: error.name,
@@ -113,23 +113,20 @@ export async function openBrowser(
 }
 
 async function getBrandingPath(brandingVideoPath?: string): Promise<string | null> {
+    Logger.withFunctionName('getBrandingPath')
     if (!brandingVideoPath) {
         return null
     }
 
-    // Try Y4M first (better for Chrome fake video capture)
     if (fs.existsSync(brandingVideoPath)) {
-        console.log(`Using branding video (Y4M): ${brandingVideoPath}`)
         return path.resolve(brandingVideoPath)
-    }
-    // Fallback to MP4 if Y4M doesn't exist
-    else {
+    } else {
         const mp4Path = brandingVideoPath.replace('.y4m', '.mp4')
         if (fs.existsSync(mp4Path)) {
-            console.log(`Using branding video (MP4 fallback): ${mp4Path}`)
+            Logger.info(`Using branding video (MP4 fallback): ${mp4Path}`)
             return path.resolve(mp4Path)
         } else {
-            console.warn(`Branding video file not found: ${brandingVideoPath}`)
+            Logger.warn(`Branding video file not found: ${brandingVideoPath}`)
             return null
         }
     }
