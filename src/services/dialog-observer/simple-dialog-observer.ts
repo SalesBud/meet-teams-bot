@@ -3,6 +3,7 @@ import { GLOBAL } from '../../singleton'
 import { MeetingContext } from '../../state-machine/types'
 import { HtmlSnapshotService } from '../html-snapshot-service'
 import { DialogObserverResult } from './types'
+import Logger from '../../utils/DatadogLogger'
 
 interface DismissTimeouts {
     VISIBLE_TIMEOUT: number
@@ -29,9 +30,10 @@ export class SimpleDialogObserver {
     }
 
     setupGlobalDialogObserver() {
+        Logger.withFunctionName('setupGlobalDialogObserver')
         // Only start observer for Google Meet
         if (GLOBAL.get().meetingProvider !== 'Meet') {
-            console.info(
+            Logger.warn(
                 `[SimpleDialogObserver] Observer not started: provider is not Google Meet (${GLOBAL.get().meetingProvider})`,
             )
             return
@@ -45,19 +47,18 @@ export class SimpleDialogObserver {
         if (this.dialogObserverInterval) {
             clearInterval(this.dialogObserverInterval)
             this.dialogObserverInterval = undefined
-            console.info(`[SimpleDialogObserver] Stopped dialog observer`)
         }
     }
 
     protected startGlobalDialogObserver() {
-        console.info(`[SimpleDialogObserver] Starting dialog observer`)
         // Check every 5 seconds
         this.dialogObserverInterval = setInterval(this.observer, 5000)
     }
 
     protected observer = async (): Promise<void> => {
+        Logger.withFunctionName('observer')
         if (!this.context.playwrightPage) {
-            console.warn(
+            Logger.warn(
                 '[SimpleDialogObserver] Cannot start observer: page not available',
             )
             return
@@ -66,7 +67,7 @@ export class SimpleDialogObserver {
         try {
             // Check if page is still open before proceeding
             if (this.context.playwrightPage?.isClosed()) {
-                console.info(
+                Logger.info(
                     `[SimpleDialogObserver] Page closed, stopping observer`,
                 )
                 this.stopGlobalDialogObserver()
@@ -78,7 +79,7 @@ export class SimpleDialogObserver {
             )
 
             if (result.found) {
-                console.info(
+                Logger.info(
                     `[SimpleDialogObserver] Modal result: ${result.modalType} - ${result.dismissed ? 'dismissed' : 'found but not dismissed'}`,
                 )
             }
@@ -90,13 +91,13 @@ export class SimpleDialogObserver {
                     'Target page, context or browser has been closed',
                 )
             ) {
-                console.info(
+                Logger.warn(
                     `[SimpleDialogObserver] Page closed during observer execution, stopping`,
                 )
                 this.stopGlobalDialogObserver()
                 return
             }
-            console.error(
+            Logger.error(
                 `[SimpleDialogObserver] Error checking dialogs: ${error}`,
             )
         }
@@ -109,14 +110,15 @@ export class SimpleDialogObserver {
         page: Page,
         customTimeout: number = 0,
     ): Promise<DialogObserverResult> {
+        Logger.withFunctionName('checkAndDismissModals')
         const timeouts =
             customTimeout === 0
                 ? TIMEOUTS
                 : {
-                      VISIBLE_TIMEOUT: customTimeout,
-                      CLICK_TIMEOUT: customTimeout,
-                      PAGE_TIMEOUT: customTimeout,
-                  }
+                    VISIBLE_TIMEOUT: customTimeout,
+                    CLICK_TIMEOUT: customTimeout,
+                    PAGE_TIMEOUT: customTimeout,
+                }
 
         try {
             // Google Meet specific modal patterns
@@ -188,7 +190,7 @@ export class SimpleDialogObserver {
                         continue
                     }
 
-                    console.info(
+                    Logger.info(
                         `[SimpleDialogObserver] Found modal: ${pattern.name}`,
                     )
 
@@ -223,7 +225,7 @@ export class SimpleDialogObserver {
                         detectionMethod: 'simple_google_meet',
                     }
                 } catch (error) {
-                    console.warn(
+                    Logger.warn(
                         `[SimpleDialogObserver] Error with pattern ${pattern.name}: ${error}`,
                     )
                 }
@@ -231,9 +233,9 @@ export class SimpleDialogObserver {
 
             return { found: false, dismissed: false, modalType: null }
         } catch (error) {
-            console.error(
+            Logger.error(
                 '[SimpleDialogObserver] Error during modal detection:',
-                error,
+                { error },
             )
             return {
                 found: false,
@@ -251,6 +253,7 @@ export class SimpleDialogObserver {
         buttonTexts: string[],
         timeouts: DismissTimeouts,
     ): Promise<boolean> {
+        Logger.withFunctionName('tryDismissModal')
         // Only search within the modal, not the entire page
         for (const buttonText of buttonTexts) {
             try {
@@ -264,9 +267,6 @@ export class SimpleDialogObserver {
                         .first()
                         .isVisible({ timeout: timeouts.VISIBLE_TIMEOUT }))
                 ) {
-                    console.info(
-                        `[SimpleDialogObserver] Clicking button: "${buttonText}"`,
-                    )
                     await button
                         .first()
                         .click({ timeout: timeouts.CLICK_TIMEOUT })
@@ -285,9 +285,6 @@ export class SimpleDialogObserver {
                         .first()
                         .isVisible({ timeout: timeouts.VISIBLE_TIMEOUT }))
                 ) {
-                    console.info(
-                        `[SimpleDialogObserver] Clicking button (partial match): "${buttonText}"`,
-                    )
                     await button
                         .first()
                         .click({ timeout: timeouts.CLICK_TIMEOUT })
@@ -304,16 +301,13 @@ export class SimpleDialogObserver {
                         .first()
                         .isVisible({ timeout: timeouts.VISIBLE_TIMEOUT }))
                 ) {
-                    console.info(
-                        `[SimpleDialogObserver] Clicking button (span): "${buttonText}"`,
-                    )
                     await button
                         .first()
                         .click({ timeout: timeouts.CLICK_TIMEOUT })
                     return true
                 }
             } catch (error) {
-                console.warn(
+                Logger.warn(
                     `[SimpleDialogObserver] Error trying button "${buttonText}": ${error}`,
                 )
             }

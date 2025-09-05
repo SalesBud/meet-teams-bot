@@ -1,6 +1,7 @@
 import { generateBranding, playBranding } from '../../branding'
 import { openBrowser } from '../../browser/browser'
 import { GLOBAL } from '../../singleton'
+import Logger from '../../utils/DatadogLogger'
 
 import { PathManager } from '../../utils/PathManager'
 import {
@@ -12,6 +13,7 @@ import { BaseState } from './base-state'
 
 export class InitializationState extends BaseState {
     async execute(): StateExecuteResult {
+        Logger.withFunctionName('execute')
         try {
             // Validate parameters
             if (!GLOBAL.get().meeting_url) {
@@ -27,11 +29,10 @@ export class InitializationState extends BaseState {
             if (GLOBAL.get().custom_branding_bot_path) {
                 try {
                     brandingVideoPath = await this.setupBrandingGeneration()
-                    console.log('Branding video ready for browser integration')
                 } catch (error) {
-                    console.warn(
+                    Logger.warn(
                         'Branding generation failed, continuing without custom branding:',
-                        error,
+                        { error },
                     )
                 }
             }
@@ -40,7 +41,7 @@ export class InitializationState extends BaseState {
             try {
                 await this.setupBrowser(brandingVideoPath)
             } catch (error) {
-                console.error('Critical error: Browser setup failed:', error)
+                Logger.error('Critical error: Browser setup failed:', { error })
                 // Add details to the error for easier diagnosis
                 const enhancedError = new Error(
                     `Browser initialization failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -62,19 +63,19 @@ export class InitializationState extends BaseState {
             GLOBAL.get().custom_branding_bot_path,
         )
         await this.context.brandingProcess.wait
-        console.log('Branding video generated successfully')
 
         // Return the path to the generated branding video for Chrome fake video capture
         return 'branding.y4m'
     }
 
     private async setupBrowser(brandingVideoPath?: string): Promise<void> {
+        Logger.withFunctionName('setupBrowser')
         const maxRetries = 3
         let lastError: Error | null = null
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                console.info(`Browser setup attempt ${attempt}/${maxRetries}`)
+                Logger.info(`Browser setup attempt ${attempt}/${maxRetries}`)
 
                 // Définir le type de retour attendu de openBrowser
                 type BrowserResult = {
@@ -106,17 +107,15 @@ export class InitializationState extends BaseState {
 
                 // If we get here, openBrowser has succeeded
                 this.context.browserContext = result.browser
-
-                console.info('Browser setup completed successfully')
                 return // Exit the function if successful
             } catch (error) {
                 lastError = error as Error
-                console.error(`Browser setup attempt ${attempt} failed:`, error)
+                Logger.error(`Browser setup attempt ${attempt} failed:`, { error })
 
                 // Si ce n'est pas la dernière tentative, attendre avant de réessayer
                 if (attempt < maxRetries) {
                     const waitTime = attempt * 5000 // Attente progressive: 5s, 10s, 15s...
-                    console.info(`Waiting ${waitTime}ms before retry...`)
+                    Logger.info(`Waiting ${waitTime}ms before retry...`)
                     await new Promise((resolve) =>
                         setTimeout(resolve, waitTime),
                     )
@@ -125,7 +124,7 @@ export class InitializationState extends BaseState {
         }
 
         // Si on arrive ici, c'est que toutes les tentatives ont échoué
-        console.error('All browser setup attempts failed')
+        Logger.error('All browser setup attempts failed')
         throw (
             lastError ||
             new Error('Browser setup failed after multiple attempts')
@@ -133,12 +132,13 @@ export class InitializationState extends BaseState {
     }
 
     private async setupPathManager(): Promise<void> {
+        Logger.withFunctionName('setupPathManager')
         try {
             if (!this.context.pathManager) {
                 this.context.pathManager = PathManager.getInstance()
             }
         } catch (error) {
-            console.error('Path manager setup failed:', error)
+            Logger.error('Path manager setup failed:', { error })
             // Create base directories if possible
             try {
                 const fs = require('fs')
@@ -149,11 +149,11 @@ export class InitializationState extends BaseState {
                     GLOBAL.get().bot_uuid,
                 )
                 fs.mkdirSync(baseDir, { recursive: true })
-                console.info('Created fallback log directory:', baseDir)
+                Logger.info('Created fallback log directory:', { baseDir })
             } catch (fsError) {
-                console.error(
+                Logger.error(
                     'Failed to create fallback log directory:',
-                    fsError,
+                    { error: fsError },
                 )
             }
             throw error

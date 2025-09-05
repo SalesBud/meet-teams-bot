@@ -3,6 +3,7 @@ import { EventEmitter } from 'events'
 import * as fs from 'fs'
 import * as path from 'path'
 import { Streaming } from '../streaming'
+import Logger from '../utils/DatadogLogger'
 
 import { Page } from 'playwright'
 import { GLOBAL } from '../singleton'
@@ -124,7 +125,7 @@ export class ScreenRecorder extends EventEmitter {
                     PathManager.getInstance().getOutputPath() + '.wav'
             }
         } catch (error) {
-            console.error('Failed to generate output paths:', error)
+            Logger.error('Failed to generate output paths:', { error })
             throw new Error('Failed to generate output paths')
         }
     }
@@ -134,6 +135,7 @@ export class ScreenRecorder extends EventEmitter {
     }
 
     public async startRecording(page: Page): Promise<void> {
+        Logger.withFunctionName('startRecording')
         if (this.isRecording) {
             throw new Error('Recording is already in progress')
         }
@@ -167,24 +169,22 @@ export class ScreenRecorder extends EventEmitter {
                 volume: 0.95, // Higher volume for better detection
             })
 
-            console.log('Native recording started successfully')
             this.emit('started', {
                 outputPath: this.outputPath,
                 isAudioOnly:
                     GLOBAL.get().recording_mode === 'audio_only',
             })
         } catch (error) {
-            console.error('Failed to start native recording:', error)
+            Logger.error('Failed to start native recording:', { error })
             this.isRecording = false
             this.emit('error', { type: 'startError', error })
         }
     }
 
     private async waitForAudioDevices(): Promise<void> {
+        Logger.withFunctionName('waitForAudioDevices')
         const maxAttempts = 15
         const delayMs = 1000
-
-        console.log('🔍 Waiting for audio devices to be ready...')
 
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
@@ -211,28 +211,28 @@ export class ScreenRecorder extends EventEmitter {
                     exitCode === 0 &&
                     output.includes(VIRTUAL_SPEAKER_MONITOR)
                 ) {
-                    console.log(
-                        `✅ Audio device ready after ${attempt} attempt(s)`,
+                    Logger.info(
+                        `Audio device ready after ${attempt} attempt(s)`,
                     )
                     return
                 }
 
-                console.log(
-                    `⏳ Attempt ${attempt}/${maxAttempts}: audio device not ready, waiting ${delayMs}ms...`,
+                Logger.warn(
+                    `Attempt ${attempt}/${maxAttempts}: audio device not ready, waiting ${delayMs}ms...`,
                 )
                 await sleep(delayMs)
             } catch (error) {
-                console.warn(
-                    `⚠️ Attempt ${attempt}/${maxAttempts}: Error checking audio device:`,
-                    error,
+                Logger.warn(
+                    `Attempt ${attempt}/${maxAttempts}: Error checking audio device:`,
+                    { error },
                 )
                 await sleep(delayMs)
             }
         }
 
         // If we get here, devices are still not ready - try a quick FFmpeg test
-        console.warn(
-            `⚠️ Audio devices not confirmed ready after ${maxAttempts} attempts, testing with FFmpeg...`,
+        Logger.warn(
+            `Audio devices not confirmed ready after ${maxAttempts} attempts, testing with FFmpeg...`,
         )
 
         try {
@@ -253,13 +253,13 @@ export class ScreenRecorder extends EventEmitter {
             })
 
             if (testExitCode === 0) {
-                console.log(
-                    '✅ FFmpeg audio test successful - devices are ready',
+                Logger.info(
+                    'FFmpeg audio test successful - devices are ready',
                 )
                 return
             }
         } catch (error) {
-            console.error('❌ FFmpeg audio test failed:', error)
+            Logger.error('FFmpeg audio test failed:', { error })
         }
 
         throw new Error(
@@ -268,10 +268,11 @@ export class ScreenRecorder extends EventEmitter {
     }
 
     private buildNativeFFmpegArgs(): string[] {
+        Logger.withFunctionName('buildNativeFFmpegArgs')
         const args: string[] = []
 
-        console.log(
-            '🛠️ Building FFmpeg args for separate audio/video recording...',
+        Logger.info(
+            'Building FFmpeg args for separate audio/video recording...',
         )
 
         const screenshotsPath = PathManager.getInstance().getScreenshotsPath()
@@ -453,15 +454,16 @@ export class ScreenRecorder extends EventEmitter {
     }
 
     private setupProcessMonitoring(): void {
+        Logger.withFunctionName('setupProcessMonitoring')
         if (!this.ffmpegProcess) return
 
         this.ffmpegProcess.on('error', (error) => {
-            console.error('FFmpeg error:', error)
+            Logger.error('FFmpeg error:', { error })
             this.emit('error', error)
         })
 
         this.ffmpegProcess.on('exit', async (code) => {
-            console.log(`FFmpeg exited with code ${code}`)
+            Logger.info(`FFmpeg exited with code ${code}`)
 
             // Consider recording successful if:
             // - Exit code 0 (normal completion)
@@ -471,20 +473,20 @@ export class ScreenRecorder extends EventEmitter {
                 (this.gracePeriodActive && (code === 255 || code === 143))
 
             if (isSuccessful) {
-                console.log('✅ Recording considered successful, uploading...')
+                Logger.info('Recording considered successful, uploading...')
                 try {
                     await this.handleSuccessfulRecording()
                 } catch (error) {
-                    console.error(
-                        '❌ Error in handleSuccessfulRecording:',
-                        error instanceof Error ? error.message : error,
+                    Logger.error(
+                        'Error in handleSuccessfulRecording:',
+                        { error: error instanceof Error ? error.message : error },
                     )
                     this.emit('error', error)
                     return
                 }
             } else {
-                console.warn(
-                    `⚠️ Recording failed - unexpected exit code: ${code}`,
+                Logger.warn(
+                    `Recording failed - unexpected exit code: ${code}`,
                 )
             }
 
@@ -503,7 +505,7 @@ export class ScreenRecorder extends EventEmitter {
             const output = data.toString()
             const outputLower = output.toLowerCase()
             if (outputLower.includes('error')) {
-                console.error('FFmpeg stderr:', output.trim())
+                Logger.error('FFmpeg stderr:', { stderr: output.trim() })
 
                 // Check for specific PulseAudio errors that indicate audio input failure
                 if (
@@ -515,8 +517,8 @@ export class ScreenRecorder extends EventEmitter {
                 ) {
                     const now = Date.now()
                     errorCount++
-                    console.warn(
-                        `⚠️ PulseAudio error detected (${errorCount}/${maxErrors})`,
+                    Logger.warn(
+                        `PulseAudio error detected (${errorCount}/${maxErrors})`,
                     )
 
                     // Only handle errors if enough time has passed since last handling
@@ -525,8 +527,8 @@ export class ScreenRecorder extends EventEmitter {
                         now - lastErrorTime > errorCooldownMs
                     ) {
                         lastErrorTime = now
-                        console.warn(
-                            '⚠️ Multiple PulseAudio errors detected, continuing recording...',
+                        Logger.warn(
+                            'Multiple PulseAudio errors detected, continuing recording...',
                         )
 
                         // Emit a warning event for monitoring purposes
@@ -548,8 +550,8 @@ export class ScreenRecorder extends EventEmitter {
         // Reset error count periodically but less frequently
         setInterval(() => {
             if (errorCount > 0) {
-                console.log(
-                    `🔄 Resetting PulseAudio error count (was ${errorCount})`,
+                Logger.warn(
+                    `Resetting PulseAudio error count (was ${errorCount})`,
                 )
                 errorCount = 0
                 lastErrorTime = 0
@@ -572,12 +574,12 @@ export class ScreenRecorder extends EventEmitter {
                         Streaming.instance.processAudioChunk(float32Array)
                     }
                 } catch (error) {
-                    console.error('Failed to process audio chunk:', error)
+                    Logger.warn('Failed to process audio chunk:', { error })
                     // Don't throw - continue processing other chunks
                 }
             })
         } catch (error) {
-            console.error('Failed to setup streaming audio:', error)
+            Logger.warn('Failed to setup streaming audio:', { error })
         }
     }
 
@@ -585,6 +587,7 @@ export class ScreenRecorder extends EventEmitter {
         chunksDir: string,
         botUuid: string,
     ): Promise<void> {
+        Logger.withFunctionName('uploadAudioChunks')
         if (!S3Uploader.getInstance()) return
 
         try {
@@ -594,26 +597,26 @@ export class ScreenRecorder extends EventEmitter {
                     file.startsWith(`${botUuid}-`) && file.endsWith('.wav'),
             )
 
-            console.log(`📤 Uploading ${chunkFiles.length} audio chunks...`)
+            Logger.info(`Uploading ${chunkFiles.length} audio chunks...`)
 
             for (const filename of chunkFiles) {
                 const chunkPath = path.join(chunksDir, filename)
 
                 if (!fs.existsSync(chunkPath)) {
-                    console.warn(`Chunk file not found: ${chunkPath}`)
+                    Logger.warn(`Chunk file not found: ${chunkPath}`)
                     continue
                 }
 
                 try {
                     const stats = fs.statSync(chunkPath)
                     if (stats.size === 0) {
-                        console.warn(`Chunk file is empty: ${filename}`)
+                        Logger.warn(`Chunk file is empty: ${filename}`)
                         continue
                     }
 
                     const s3Key = `${botUuid}/temporary_audio/${filename}`
-                    console.log(
-                        `📤 Uploading chunk: ${filename} (${stats.size} bytes)`,
+                    Logger.info(
+                        `Uploading chunk: ${filename} (${stats.size} bytes)`,
                     )
 
                     await S3Uploader.getInstance().uploadFile(
@@ -622,17 +625,18 @@ export class ScreenRecorder extends EventEmitter {
                         s3Key
                     )
 
-                    console.log(`✅ Chunk uploaded: ${filename}`)
+                    Logger.info(`Chunk uploaded: ${filename}`)
                 } catch (error) {
-                    console.error(`Failed to upload chunk ${filename}:`, error)
+                    Logger.warn(`Failed to upload chunk ${filename}:`, { error })
                 }
             }
         } catch (error) {
-            console.error('Failed to read chunks directory:', error)
+            Logger.error('Failed to read chunks directory:', { error })
         }
     }
 
     public async uploadToS3(): Promise<void> {
+        Logger.withFunctionName('uploadToS3')
         if (this.filesUploaded || !S3Uploader.getInstance()) {
             return
         }
@@ -641,8 +645,8 @@ export class ScreenRecorder extends EventEmitter {
 
         try {
             if (fs.existsSync(this.audioOutputPath)) {
-                console.log(
-                    `📤 Uploading WAV audio to video bucket: ${GLOBAL.get().remote?.aws_s3_video_bucket}`,
+                Logger.info(
+                    `Uploading WAV audio to video bucket: ${GLOBAL.get().remote?.aws_s3_video_bucket}`,
                 )
                 await S3Uploader.getInstance().uploadFile(
                     this.audioOutputPath,
@@ -652,14 +656,14 @@ export class ScreenRecorder extends EventEmitter {
                 fs.unlinkSync(this.audioOutputPath)
             }
         } catch (error) {
-            console.error('Failed to upload audio file:', error)
+            Logger.error('Failed to upload audio file:', { error })
             // Don't throw - continue with video upload
         }
 
         try {
             if (fs.existsSync(this.outputPath)) {
-                console.log(
-                    `📤 Uploading MP4 to video bucket: ${GLOBAL.get().remote?.aws_s3_video_bucket}`,
+                Logger.info(
+                    `Uploading MP4 to video bucket: ${GLOBAL.get().remote?.aws_s3_video_bucket}`,
                 )
                 await S3Uploader.getInstance().uploadFile(
                     this.outputPath,
@@ -669,7 +673,7 @@ export class ScreenRecorder extends EventEmitter {
                 fs.unlinkSync(this.outputPath)
             }
         } catch (error) {
-            console.error('Failed to upload video file:', error)
+            Logger.error('Failed to upload video file:', { error })
             // Don't throw - mark as uploaded to allow process completion
         }
 
@@ -677,24 +681,25 @@ export class ScreenRecorder extends EventEmitter {
     }
 
     public async stopRecording(): Promise<void> {
+        Logger.withFunctionName('stopRecording')
         if (!this.isRecording || !this.ffmpegProcess) {
             return
         }
 
-        console.log('🛑 Stop recording requested - starting grace period...')
+        Logger.info('Stop recording requested - starting grace period...')
         this.gracePeriodActive = true
 
         const gracePeriodMs = GRACE_PERIOD_SECONDS * 1000
 
         // Wait for grace period to allow clean ending
-        console.log(
-            `⏳ Grace period: ${GRACE_PERIOD_SECONDS}s for clean ending`,
+        Logger.info(
+            `Grace period: ${GRACE_PERIOD_SECONDS}s for clean ending`,
         )
 
         await new Promise<void>((resolve) => {
             setTimeout(() => {
-                console.log(
-                    '✅ Grace period completed - stopping FFmpeg cleanly',
+                Logger.info(
+                    'Grace period completed - stopping FFmpeg cleanly',
                 )
                 resolve()
             }, gracePeriodMs)
@@ -709,9 +714,9 @@ export class ScreenRecorder extends EventEmitter {
             })
 
             this.once('error', (error) => {
-                console.error(
+                Logger.error(
                     'ScreenRecorder error during stop:',
-                    error instanceof Error ? error.message : error,
+                    { error: error instanceof Error ? error.message : error },
                 )
                 this.gracePeriodActive = false
                 this.ffmpegProcess = null
@@ -724,7 +729,7 @@ export class ScreenRecorder extends EventEmitter {
             // Fallback force kill after timeout
             setTimeout(() => {
                 if (this.ffmpegProcess && !this.ffmpegProcess.killed) {
-                    console.warn('⚠️ Force killing FFmpeg process')
+                    Logger.warn('Force killing FFmpeg process')
                     this.ffmpegProcess.kill('SIGKILL')
                 }
             }, 8000)
@@ -751,7 +756,7 @@ export class ScreenRecorder extends EventEmitter {
     }
 
     private async handleSuccessfulRecording(): Promise<void> {
-        console.log('Native recording completed')
+        Logger.withFunctionName('handleSuccessfulRecording')
 
         try {
             // Sync and merge separate audio/video files
@@ -761,13 +766,13 @@ export class ScreenRecorder extends EventEmitter {
             if (!GLOBAL.isServerless()) {
                 try {
                     await this.uploadToS3()
-                    console.log('✅ Upload completed successfully')
+                    Logger.info('Upload completed successfully')
                 } catch (error) {
-                    console.error('❌ Upload failed:', error)
+                    Logger.error('Upload failed:', { error })
                 }
             }
         } catch (error) {
-            console.error('❌ Error during recording processing:', error)
+            Logger.error('Error during recording processing:', { error })
 
             if (error instanceof Error) {
                 if (
@@ -780,13 +785,13 @@ export class ScreenRecorder extends EventEmitter {
                         GLOBAL.getEndReason() ===
                         MeetingEndReason.BotNotAccepted
                     ) {
-                        console.log(
+                        Logger.warn(
                             'Preserving existing BotNotAccepted error instead of creating BotRemovedTooEarly',
                         )
                         throw error // Re-throw the original error to preserve BotNotAccepted
                     }
 
-                    console.log(
+                    Logger.warn(
                         'Converting FFprobe/FFmpeg error to BotRemovedTooEarly',
                     )
                     GLOBAL.setError(MeetingEndReason.BotRemovedTooEarly)
@@ -807,20 +812,20 @@ export class ScreenRecorder extends EventEmitter {
             const tempDir = PathManager.getInstance().getTempPath()
             const rawAudioPath = path.join(tempDir, 'raw.wav')
 
-            console.log('🔄 Processing audio-only recording...')
+            Logger.info('Processing audio-only recording...')
 
             if (fs.existsSync(rawAudioPath)) {
                 // Copy raw audio to final output location
                 fs.copyFileSync(rawAudioPath, this.audioOutputPath)
-                console.log(`✅ Audio copied to: ${this.audioOutputPath}`)
+                Logger.info(`Audio copied to: ${this.audioOutputPath}`)
 
                 // Create audio chunks from the final audio file
                 await this.createAudioChunks(this.audioOutputPath)
             } else {
-                console.error('❌ Raw audio file not found:', rawAudioPath)
+                Logger.error('Raw audio file not found:', { rawAudioPath })
             }
 
-            console.log('✅ Audio-only processing completed')
+            Logger.info('Audio-only processing completed')
             return
         }
 
@@ -828,10 +833,6 @@ export class ScreenRecorder extends EventEmitter {
         const tempDir = PathManager.getInstance().getTempPath()
         const rawVideoPath = path.join(tempDir, 'raw.mp4')
         const rawAudioPath = path.join(tempDir, 'raw.wav')
-
-        console.log(
-            '🔄 Starting efficient sync and merge for long recording...',
-        )
 
         // 1. Calculate sync offset (using your existing calculation)
         const syncResult = await calculateVideoOffset(
@@ -845,14 +846,14 @@ export class ScreenRecorder extends EventEmitter {
 
         // 2. Check if meetingStartTime is properly set - if not, bot was not accepted
         if (!hasMeetingStartTime) {
-            console.error(
-                `❌ Bot not accepted - meetingStartTime not set (${this.meetingStartTime})`,
+            Logger.error(
+                `Bot not accepted - meetingStartTime not set (${this.meetingStartTime})`,
             )
-            console.error(`📊 Timing debug:`)
-            console.error(`   recordingStartTime: ${this.recordingStartTime}`)
-            console.error(`   meetingStartTime: ${this.meetingStartTime}`)
-            console.error(`   Current time: ${Date.now()}`)
-            console.error(
+            Logger.error(`Timing debug:`)
+            Logger.error(`   recordingStartTime: ${this.recordingStartTime}`)
+            Logger.error(`   meetingStartTime: ${this.meetingStartTime}`)
+            Logger.error(`   Current time: ${Date.now()}`)
+            Logger.error(
                 `   Recording duration: ${Date.now() - this.recordingStartTime}ms`,
             )
 
@@ -860,8 +861,8 @@ export class ScreenRecorder extends EventEmitter {
             const recordingDuration = Date.now() - this.recordingStartTime
             if (recordingDuration > 10000) {
                 // 10 seconds minimum
-                console.warn(
-                    `⚠️ Setting meetingStartTime to 5s before bot removal to avoid showing pre-meeting phase`,
+                Logger.warn(
+                    `Setting meetingStartTime to 5s before bot removal to avoid showing pre-meeting phase`,
                 )
                 this.meetingStartTime = Date.now() - 5000 // Show only last 5 seconds
             } else {
@@ -878,17 +879,17 @@ export class ScreenRecorder extends EventEmitter {
                 FLASH_SCREEN_SLEEP_TIME) /
             1000
 
-        console.log(`📊 Debug values:`)
-        console.log(
+        Logger.info(`Debug values:`)
+        Logger.info(
             `   syncResult.videoTimestamp: ${syncResult.videoTimestamp}s`,
         )
-        console.log(
+        Logger.info(
             `   syncResult.audioTimestamp: ${syncResult.audioTimestamp}s`,
         )
-        console.log(`   meetingStartTime: ${this.meetingStartTime}`)
-        console.log(`   recordingStartTime: ${this.recordingStartTime}`)
-        console.log(`   FLASH_SCREEN_SLEEP_TIME: ${FLASH_SCREEN_SLEEP_TIME}`)
-        console.log(
+        Logger.info(`   meetingStartTime: ${this.meetingStartTime}`)
+        Logger.info(`   recordingStartTime: ${this.recordingStartTime}`)
+        Logger.info(`   FLASH_SCREEN_SLEEP_TIME: ${FLASH_SCREEN_SLEEP_TIME}`)
+        Logger.info(
             `   Time diff: ${(this.meetingStartTime - this.recordingStartTime - FLASH_SCREEN_SLEEP_TIME) / 1000}s`,
         )
 
@@ -896,13 +897,13 @@ export class ScreenRecorder extends EventEmitter {
         const audioPadding =
             syncResult.videoTimestamp - syncResult.audioTimestamp
 
-        console.log(`🔇 Audio padding needed: ${audioPadding.toFixed(3)}s`)
+        Logger.info(`Audio padding needed: ${audioPadding.toFixed(3)}s`)
 
         // 5. Prepare audio with padding or trimming if needed
         const processedAudioPath = path.join(tempDir, 'processed.wav')
         if (audioPadding > 0) {
-            console.log(
-                `🔇 Adding ${audioPadding.toFixed(3)}s silence to audio start (video ahead)...`,
+            Logger.info(
+                `Adding ${audioPadding.toFixed(3)}s silence to audio start (video ahead)...`,
             )
             await this.addSilencePadding(
                 rawAudioPath,
@@ -910,8 +911,8 @@ export class ScreenRecorder extends EventEmitter {
                 audioPadding,
             )
         } else if (audioPadding < 0) {
-            console.log(
-                `✂️ Trimming ${(audioPadding * -1).toFixed(3)}s from audio start (video behind)...`,
+            Logger.info(
+                `Trimming ${(audioPadding * -1).toFixed(3)}s from audio start (video behind)...`,
             )
             await this.trimAudioStart(
                 rawAudioPath,
@@ -934,7 +935,7 @@ export class ScreenRecorder extends EventEmitter {
             audioDuration,
         )
 
-        console.log(`📊 Final duration: ${finalDuration.toFixed(2)}s`)
+        Logger.info(`Final duration: ${finalDuration.toFixed(2)}s`)
         await this.finalTrimFromOffset(
             mergedPath,
             this.outputPath,
@@ -948,18 +949,15 @@ export class ScreenRecorder extends EventEmitter {
                 this.outputPath,
                 this.audioOutputPath,
             )
-            console.log(
-                `✅ Audio extracted from final video: ${this.audioOutputPath}`,
+            Logger.info(
+                `Audio extracted from final video: ${this.audioOutputPath}`,
             )
 
             // 8. Create audio chunks from the extracted audio
             await this.createAudioChunks(this.audioOutputPath)
         } catch (error) {
-            console.warn(
-                `⚠️ Audio extraction failed (likely due to bot removal): ${error}`,
-            )
-            console.warn(
-                `⚠️ Continuing without audio extraction to prevent bot hang`,
+            Logger.warn(
+                `Audio extraction failed (likely due to bot removal): ${error} \n Continuing without audio extraction to prevent bot hang`,
             )
             // Don't throw - allow cleanup to continue
         }
@@ -972,7 +970,7 @@ export class ScreenRecorder extends EventEmitter {
             mergedPath,
         ])
 
-        console.log('✅ Efficient sync and merge completed successfully')
+        Logger.info('Efficient sync and merge completed successfully')
     }
 
     private async addSilencePadding(
@@ -980,6 +978,7 @@ export class ScreenRecorder extends EventEmitter {
         outputAudioPath: string,
         paddingSeconds: number,
     ): Promise<void> {
+        Logger.withFunctionName('addSilencePadding')
         const tempDir = PathManager.getInstance().getTempPath()
         const silenceFile = path.join(tempDir, 'silence.wav')
         const concatListFile = path.join(tempDir, 'concat_list.txt')
@@ -1000,7 +999,7 @@ export class ScreenRecorder extends EventEmitter {
             silenceFile,
         ]
 
-        console.log(`🔇 Creating ${paddingSeconds.toFixed(3)}s silence file`)
+        Logger.info(`Creating ${paddingSeconds.toFixed(3)}s silence file`)
         await this.runFFmpeg(silenceArgs, 'addSilencePadding', paddingSeconds)
 
         // Create concat list with absolute paths (no escaping needed)
@@ -1011,10 +1010,6 @@ export class ScreenRecorder extends EventEmitter {
 file '${absoluteInputPath}'`
 
         fs.writeFileSync(concatListFile, concatContent, 'utf8')
-        console.log(`📝 Created concat list:`)
-        console.log(`   - ${absoluteSilencePath}`)
-        console.log(`   - ${absoluteInputPath}`)
-
         // Concatenate using concat demuxer with re-encoding for clean timestamps
         const concatArgs = [
             '-f',
@@ -1033,9 +1028,6 @@ file '${absoluteInputPath}'`
             outputAudioPath,
         ]
 
-        console.log(
-            `🔇 Concatenating with demuxer (re-encoding for clean timestamps)`,
-        )
         await this.runFFmpeg(concatArgs, 'addSilencePadding', paddingSeconds)
 
         // Cleanup temp files
@@ -1069,9 +1061,6 @@ file '${absoluteInputPath}'`
             outputAudioPath,
         ]
 
-        console.log(
-            `✂️ Trimming ${trimSeconds.toFixed(3)}s from audio start (re-encoding for clean timestamps)`,
-        )
         await this.runFFmpeg(args, 'trimAudioStart', trimSeconds)
     }
 
@@ -1080,6 +1069,7 @@ file '${absoluteInputPath}'`
         audioPath: string,
         outputPath: string,
     ): Promise<void> {
+        Logger.withFunctionName('mergeWithSync')
         const args = [
             '-i',
             videoPath,
@@ -1098,8 +1088,8 @@ file '${absoluteInputPath}'`
             outputPath,
         ]
 
-        console.log(
-            `🎬 Merging video and audio (ultra-fast copy + AAC audio - keyframes already optimized)`,
+        Logger.info(
+            `Merging video and audio (ultra-fast copy + AAC audio - keyframes already optimized)`,
         )
 
         // Estimate file size for timeout calculation
@@ -1116,6 +1106,7 @@ file '${absoluteInputPath}'`
         calcOffset: number,
         duration: number,
     ): Promise<void> {
+        Logger.withFunctionName('finalTrimFromOffset')
         // Now we can use ultra-fast copy mode since the merged file has frequent keyframes
         // The video was re-encoded during merge with keyframes every 1 second
         const args = [
@@ -1137,10 +1128,6 @@ file '${absoluteInputPath}'`
             outputPath,
         ]
 
-        console.log(
-            `✂️ Final trim: ultra-fast copy mode ${duration.toFixed(2)}s from ${calcOffset.toFixed(3)}s (frequent keyframes = no freeze)`,
-        )
-
         // Estimate file size for timeout calculation
         const estimatedSizeMB = this.estimateFileSizeMB(inputPath)
 
@@ -1151,6 +1138,7 @@ file '${absoluteInputPath}'`
         videoPath: string,
         audioPath: string,
     ): Promise<void> {
+        Logger.withFunctionName('extractAudioFromVideo')
         const args = [
             '-i',
             videoPath,
@@ -1165,8 +1153,8 @@ file '${absoluteInputPath}'`
             audioPath,
         ]
 
-        console.log(
-            '🎵 Extracting audio from video (converting to WAV PCM 16kHz mono)',
+        Logger.info(
+            'Extracting audio from video (converting to WAV PCM 16kHz mono)',
         )
 
         // Estimate file size for timeout calculation
@@ -1176,6 +1164,7 @@ file '${absoluteInputPath}'`
     }
 
     private async createAudioChunks(audioPath: string): Promise<void> {
+        Logger.withFunctionName('createAudioChunks')
         if (!GLOBAL.get().speech_to_text_provider) return
 
         const chunksDir = PathManager.getInstance().getAudioTmpPath()
@@ -1210,8 +1199,8 @@ file '${absoluteInputPath}'`
             chunkPattern,
         ]
 
-        console.log(
-            `🎵 Creating audio chunks (${chunkDuration}s each) from ${duration.toFixed(1)}s audio`,
+        Logger.info(
+            `Creating audio chunks (${chunkDuration}s each) from ${duration.toFixed(1)}s audio`,
         )
         try {
             // Estimate file size for timeout calculation
@@ -1221,11 +1210,8 @@ file '${absoluteInputPath}'`
             // Upload created chunks
             await this.uploadAudioChunks(chunksDir, botUuid)
         } catch (error) {
-            console.warn(
-                `⚠️ Audio chunking failed (likely due to bot removal): ${error}`,
-            )
-            console.warn(
-                `⚠️ Continuing without audio chunks to prevent bot hang`,
+            Logger.warn(
+                `Audio chunking failed (likely due to bot removal): ${error} \n Continuing without audio chunks to prevent bot hang`,
             )
             // Don't throw - allow cleanup to continue
         }
@@ -1241,9 +1227,9 @@ file '${absoluteInputPath}'`
                 return Math.round(stats.size / (1024 * 1024))
             }
         } catch (error) {
-            console.warn(
+            Logger.warn(
                 'Could not estimate file size for timeout calculation:',
-                error,
+                { error },
             )
         }
         return 100 // Default estimate
@@ -1277,10 +1263,11 @@ file '${absoluteInputPath}'`
         operation: string = 'unknown',
         fileSizeMB?: number,
     ): Promise<void> {
+        Logger.withFunctionName('runFFmpeg')
         const timeout = calculateFFmpegTimeout(operation, fileSizeMB)
 
-        console.log(
-            `⏱️ FFmpeg ${operation}: timeout set to ${timeout / 1000}s${fileSizeMB ? ` (estimated file size: ${fileSizeMB}MB)` : ''}`,
+        Logger.info(
+            `FFmpeg ${operation}: timeout set to ${timeout / 1000}s${fileSizeMB ? ` (estimated file size: ${fileSizeMB}MB)` : ''}`,
         )
 
         return new Promise((resolve, reject) => {
@@ -1302,23 +1289,23 @@ file '${absoluteInputPath}'`
                         .split('\n')
                         .slice(-3)
                         .join('\n') // Last 3 lines
-                    console.error(`❌ ${errorMsg}`)
+                    Logger.error(`FFmpeg error: ${errorMsg}`)
                     if (stderrPreview) {
-                        console.error(`❌ FFmpeg stderr: ${stderrPreview}`)
+                        Logger.error(`FFmpeg stderr: ${stderrPreview}`)
                     }
                     reject(new Error(errorMsg))
                 }
             })
 
             process.on('error', (error) => {
-                console.error(`❌ FFmpeg process error: ${error.message}`)
+                Logger.error(`FFmpeg process error: ${error.message}`)
                 reject(error)
             })
 
             // Add dynamic timeout to prevent hanging
             const timeoutId = setTimeout(() => {
-                console.error(
-                    `❌ FFmpeg timeout after ${timeout / 1000}s for ${operation}, killing process`,
+                Logger.error(
+                    `FFmpeg timeout after ${timeout / 1000}s for ${operation}, killing process`,
                 )
                 process.kill('SIGKILL')
                 reject(new Error(`FFmpeg timeout for ${operation}`))
@@ -1331,6 +1318,7 @@ file '${absoluteInputPath}'`
     }
 
     private async runFFprobe(args: string[]): Promise<string> {
+        Logger.withFunctionName('runFFprobe')
         return new Promise((resolve, reject) => {
             const process = spawn('ffprobe', args)
             let output = ''
@@ -1353,7 +1341,7 @@ file '${absoluteInputPath}'`
 
             // Add timeout for metadata operations
             const timeoutId = setTimeout(() => {
-                console.error(`❌ FFprobe timeout after 30s, killing process`)
+                Logger.error(`FFprobe timeout after 30s, killing process`)
                 process.kill('SIGKILL')
                 reject(new Error('FFprobe timeout'))
             }, 30000)

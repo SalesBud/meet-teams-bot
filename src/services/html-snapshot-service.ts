@@ -2,6 +2,7 @@ import { Page } from '@playwright/test'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import { PathManager } from '../utils/PathManager'
+import Logger from '../utils/DatadogLogger'
 
 export interface HtmlSnapshotResult {
     success: boolean
@@ -28,9 +29,10 @@ export class HtmlSnapshotService {
      * Capture HTML snapshot before DOM manipulation
      */
     public async captureSnapshot(page: Page, context: string): Promise<HtmlSnapshotResult> {
+        Logger.withFunctionName('captureSnapshot')
         // Ensure the snapshot promise cannot cause unhandled rejections if it loses the race
         const snapshotPromise = this.performSnapshot(page, context).catch((error) => {
-            console.error(`[HtmlSnapshot] Snapshot error for ${context}:`, error?.message ?? error)
+            Logger.error(`[HtmlSnapshot] Snapshot error for ${context}:`, { error: error?.message ?? error })
             return { success: false }
         })
         
@@ -38,7 +40,7 @@ export class HtmlSnapshotService {
         let timeoutId: NodeJS.Timeout
         const timeoutPromise = new Promise<HtmlSnapshotResult>((resolve) => {
             timeoutId = setTimeout(() => {
-                console.warn(`[HtmlSnapshot] Snapshot operation timeout after ${SNAPSHOT_TIMEOUT / 1000}s for ${context}`)
+                Logger.warn(`[HtmlSnapshot] Snapshot operation timeout after ${SNAPSHOT_TIMEOUT / 1000}s for ${context}`)
                 resolve({ success: false })
             }, SNAPSHOT_TIMEOUT)
         })
@@ -56,9 +58,10 @@ export class HtmlSnapshotService {
         page: Page,
         context: string
     ): Promise<HtmlSnapshotResult> {
+        Logger.withFunctionName('performSnapshot')
         // Check if page is still valid
         if (page.isClosed()) {
-            console.warn('[HtmlSnapshot] Cannot capture snapshot: page is closed')
+            Logger.warn('[HtmlSnapshot] Cannot capture snapshot: page is closed')
             return {
                 success: false
             }
@@ -72,11 +75,9 @@ export class HtmlSnapshotService {
                 { timeout: 1000 }
             )
         } catch (evalError) {
-            console.warn(`[HtmlSnapshot] Page not responsive for ${context}, skipping snapshot`)
+            Logger.warn(`[HtmlSnapshot] Page not responsive for ${context}, skipping snapshot`)
             return { success: false }
         }
-
-        console.log(`[HtmlSnapshot] Capturing snapshot for ${context}`)
 
         // Capture HTML content
         const html = await page.content()
@@ -90,8 +91,6 @@ export class HtmlSnapshotService {
         
         // Save HTML file
         await fs.writeFile(filePath, html, 'utf-8')
-        
-        console.log(`[HtmlSnapshot] Captured snapshot: ${filename}`)
         
         return {
             success: true

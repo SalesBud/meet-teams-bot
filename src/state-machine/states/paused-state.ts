@@ -4,9 +4,11 @@ import { GLOBAL } from '../../singleton'
 import { MEETING_CONSTANTS } from '../constants'
 import { MeetingStateType, StateExecuteResult } from '../types'
 import { BaseState } from './base-state'
+import Logger from '../../utils/DatadogLogger'
 
 export class PausedState extends BaseState {
     async execute(): StateExecuteResult {
+        Logger.withFunctionName('execute')
         try {
             // Marquer le début de la pause
             if (!this.context.pauseStartTime) {
@@ -44,7 +46,7 @@ export class PausedState extends BaseState {
                     Date.now() - pauseStartTime >
                     MEETING_CONSTANTS.RESUMING_TIMEOUT
                 ) {
-                    console.warn(
+                    Logger.warn(
                         'Maximum pause duration exceeded, forcing resume',
                     )
                     this.context.isPaused = false
@@ -61,28 +63,29 @@ export class PausedState extends BaseState {
 
             return this.transition(MeetingStateType.Resuming)
         } catch (error) {
-            console.error('Error in paused state:', error)
+            Logger.error('Error in paused state:', { error })
             return this.handleError(error as Error)
         }
     }
 
     private async pauseRecording(): Promise<void> {
+        Logger.withFunctionName('pauseRecording')
         const pausePromise = async () => {
             // TODO: PAUSE SCREEN RECORDER
 
             // Streaming service paused
             if (this.context.streamingService) {
                 this.context.streamingService.pause()
-                console.log('Streaming service paused successfully')
+                Logger.info('Streaming service paused successfully')
             }
 
             // Speakers observation paused
             if (this.context.speakersObserver) {
                 this.context.speakersObserver.stopObserving()
-                console.log('Speakers observation paused')
+                Logger.info('Speakers observation paused')
             }
 
-            console.log('Recording paused successfully')
+            Logger.info('Recording paused successfully')
         }
 
         const timeoutPromise = new Promise<void>(
@@ -96,7 +99,7 @@ export class PausedState extends BaseState {
         try {
             await Promise.race([pausePromise(), timeoutPromise])
         } catch (error) {
-            console.error('Error or timeout in pauseRecording:', error)
+            Logger.error('Error or timeout in pauseRecording:', { error })
             throw error
         }
     }
