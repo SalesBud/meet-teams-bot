@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { GLOBAL } from './singleton'
 import { TranscriptionFinishedData } from './types/Transcript'
+import Logger from './utils/DatadogLogger'
 
 export class Events {
     private static EVENTS: Events | null = null
@@ -91,7 +92,8 @@ export class Events {
     }
 
     static async recordingFailed(errorMessage: string) {
-        console.log(`📤 Events.recordingFailed called with: ${errorMessage}`)
+        Logger.withFunctionName('recordingFailed')
+        Logger.info(`Events.recordingFailed called with: ${errorMessage}`)
         return Events.EVENTS?.sendOnce('recording_failed', {
             error_message: errorMessage,
         })
@@ -112,8 +114,9 @@ export class Events {
         additionalData: Record<string, any> = {},
         event: string = 'bot.status_change',
     ): Promise<void> {
+        Logger.withFunctionName('sendOnce')
         if (this.sentEvents.has(code)) {
-            console.log(`Event ${code} already sent, skipping...`)
+            Logger.warn(`Event ${code} already sent, skipping...`)
             return
         }
 
@@ -127,6 +130,7 @@ export class Events {
         additionalData: Record<string, any> = {},
         event: string = 'bot.status_change',
     ): Promise<void> {
+        Logger.withFunctionName('send')
         try {
             await axios({
                 method: 'POST',
@@ -147,21 +151,15 @@ export class Events {
                     },
                 },
             })
-            console.log(
+            Logger.info(
                 'Event sent successfully:',
-                code,
-                this.botId,
-                this.webhookUrl,
-                event,
+                { code, botId: this.botId, webhookUrl: this.webhookUrl, event },
             )
         } catch (error) {
             if (error instanceof Error) {
-                console.warn(
+                Logger.warn(
                     'Unable to send event (continuing execution):',
-                    code,
-                    this.botId,
-                    this.webhookUrl,
-                    error.message,
+                    { code, botId: this.botId, webhookUrl: this.webhookUrl, error: error.message },
                 )
             }
         }

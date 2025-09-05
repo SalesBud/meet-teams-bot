@@ -1,4 +1,5 @@
 import { BrowserContext, Page } from '@playwright/test'
+import Logger from './utils/DatadogLogger'
 
 export type SpeechToTextProvider = 'Default' | 'Gladia' | 'RunPod'
 
@@ -18,6 +19,7 @@ export type RecordingMode = 'speaker_view' | 'gallery_view' | 'audio_only' | 'Sp
  * @returns The normalized recording mode in snake_case format
  */
 export function normalizeRecordingMode(mode: RecordingMode): 'speaker_view' | 'gallery_view' | 'audio_only' {
+    Logger.withFunctionName('normalizeRecordingMode')
     switch (mode) {
         case 'speaker_view':
         case 'SpeakerView':
@@ -30,7 +32,7 @@ export function normalizeRecordingMode(mode: RecordingMode): 'speaker_view' | 'g
             return 'audio_only'
         default:
             // Default to speaker_view if unknown
-            console.warn(`Unknown recording mode: ${mode}, defaulting to speaker_view`)
+            Logger.warn(`Unknown recording mode: ${mode}, defaulting to speaker_view`)
             return 'speaker_view'
     }
 }

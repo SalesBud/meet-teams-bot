@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import { GLOBAL } from '../singleton'
+import Logger from './DatadogLogger'
 
 const EFS_MOUNT_POINT = process.env.EFS_MOUNT_POINT || '/mnt/efs'
 
@@ -27,6 +28,7 @@ export class PathManager {
     }
 
     public async initializePaths(): Promise<void> {
+        Logger.withFunctionName('initializePaths')
         const paths = [
             this.getBasePath(),
             path.dirname(this.getOutputPath()),
@@ -39,9 +41,8 @@ export class PathManager {
         for (const p of paths) {
             try {
                 await fs.mkdir(p, { recursive: true })
-                console.log(`Created directory: ${p}`)
             } catch (error) {
-                console.error(`Failed to create directory ${p}:`, error)
+                Logger.error(`Failed to create directory ${p}:`, { error })
                 throw error
             }
         }

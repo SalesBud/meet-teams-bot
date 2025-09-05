@@ -1,5 +1,6 @@
 import { GLOBAL } from '../singleton'
 import { MeetingEndReason } from '../state-machine/types'
+import Logger from '../utils/DatadogLogger'
 
 interface TeamsUrlComponents {
     meetingId: string
@@ -7,6 +8,7 @@ interface TeamsUrlComponents {
 }
 
 function convertLightMeetingToStandard(url: URL): string {
+    Logger.withFunctionName('convertLightMeetingToStandard')
     const coords = url.searchParams.get('coords')
     if (!coords) {
         GLOBAL.setError(MeetingEndReason.InvalidMeetingUrl)
@@ -30,13 +32,14 @@ function convertLightMeetingToStandard(url: URL): string {
 
         return `https://teams.microsoft.com/v2/?meetingjoin=true#/l/meetup-join/${conversationId}/${messageId}?context=${encodeURIComponent(JSON.stringify(context))}&anon=true`
     } catch (e) {
-        console.error('Error converting light meeting URL:', e)
+        Logger.error('Error converting light meeting URL:', { error: e })
         GLOBAL.setError(MeetingEndReason.InvalidMeetingUrl)
         throw new Error('Failed to convert Teams light meeting URL')
     }
 }
 
 function transformTeamsLink(originalLink: string): string {
+    Logger.withFunctionName('transformTeamsLink')
     try {
         // Check if it's already in the working format
         if (originalLink.includes('/v2/?meetingjoin=true')) {
@@ -47,7 +50,7 @@ function transformTeamsLink(originalLink: string): string {
 
         // Handle light-meetings format
         if (url.pathname.includes('/light-meetings/launch')) {
-            console.log(
+            Logger.info(
                 'Detected light-meetings URL, converting to working format',
             )
             return convertLightMeetingToStandard(url)
@@ -67,7 +70,7 @@ function transformTeamsLink(originalLink: string): string {
         // Build the working link format
         return `https://teams.microsoft.com/v2/?meetingjoin=true#/l/meetup-join/${threadId}/${timestamp}?context=${context}&anon=true`
     } catch (error) {
-        console.error('Error transforming Teams link:', error)
+        Logger.warn('Error transforming Teams link:', { error })
         return originalLink
     }
 }
@@ -75,13 +78,14 @@ function transformTeamsLink(originalLink: string): string {
 export function parseMeetingUrlFromJoinInfos(
     meeting_url: string,
 ): TeamsUrlComponents {
+    Logger.withFunctionName('parseMeetingUrlFromJoinInfos')
     try {
         if (!meeting_url) {
             GLOBAL.setError(MeetingEndReason.InvalidMeetingUrl)
             throw new Error('No meeting URL provided')
         }
 
-        console.log('Parsing meeting URL:', meeting_url)
+        Logger.info('Parsing meeting URL:', { meeting_url })
 
         // Handle Google redirect URLs
         if (meeting_url.startsWith('https://www.google.com/url')) {
@@ -111,12 +115,12 @@ export function parseMeetingUrlFromJoinInfos(
 
         // Handle teams.microsoft.com URLs
         if (url.hostname.includes('teams.microsoft.com')) {
-            console.log(
+            Logger.info(
                 `Detected teams.microsoft.com URL ${meeting_url}\n, transforming to more compatible format`,
             )
             // Transform the URL to the more compatible format
             const transformedUrl = transformTeamsLink(meeting_url)
-            console.log('Using transformed Teams URL:', transformedUrl)
+            Logger.info('Using transformed Teams URL:', { transformedUrl })
             return {
                 meetingId: transformedUrl,
                 password: '',

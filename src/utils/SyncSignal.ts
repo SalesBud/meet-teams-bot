@@ -4,6 +4,7 @@
  */
 
 import { Page } from 'playwright'
+import Logger from './DatadogLogger'
 
 interface SyncSignalOptions {
     /** Duration of the sync signal in milliseconds (default: 500) */
@@ -25,6 +26,7 @@ export async function generateSyncSignal(
     page: Page,
     options: SyncSignalOptions = {},
 ): Promise<void> {
+    Logger.withFunctionName('generateSyncSignal')
     const {
         duration = 150,
         frequency = 1000,
@@ -32,7 +34,7 @@ export async function generateSyncSignal(
         volume = 0.9,
     } = options
 
-    console.log(
+    Logger.info(
         `🎯 Generating sync signal: ${frequency}Hz beep + flash (${duration}ms)`,
     )
 
@@ -43,9 +45,9 @@ export async function generateSyncSignal(
             generateVisualFlash(page, flashColor, duration),
         ])
 
-        console.log('✅ Sync signal generated successfully')
+        Logger.info('✅ Sync signal generated successfully')
     } catch (error) {
-        console.error('❌ Failed to generate sync signal:', error)
+        Logger.error('❌ Failed to generate sync signal:', { error })
         throw error
     }
 }
@@ -59,6 +61,7 @@ async function generateAudioBeep(
     duration: number,
     volume: number,
 ): Promise<void> {
+    Logger.withFunctionName('generateAudioBeep')
     await page.evaluate(
         ({ freq, dur, vol }) => {
             if ((window as any).__syncAudioContext) {
@@ -133,6 +136,7 @@ async function generateVisualFlash(
     color: string,
     duration: number,
 ): Promise<void> {
+    Logger.withFunctionName('generateVisualFlash')
     await page.evaluate(
         ({ flashColor, dur }) => {
             if (document.querySelector('#sync-flash-overlay')) {
