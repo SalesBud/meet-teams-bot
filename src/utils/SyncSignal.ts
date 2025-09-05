@@ -59,6 +59,7 @@ async function generateAudioBeep(
     duration: number,
     volume: number,
 ): Promise<void> {
+    Logger.withFunctionName('generateAudioBeep')
     await page.evaluate(
         ({ freq, dur, vol }) => {
             if ((window as any).__syncAudioContext) {
@@ -133,6 +134,7 @@ async function generateVisualFlash(
     color: string,
     duration: number,
 ): Promise<void> {
+    Logger.withFunctionName('generateVisualFlash')
     await page.evaluate(
         ({ flashColor, dur }) => {
             if (document.querySelector('#sync-flash-overlay')) {
