@@ -1,5 +1,6 @@
 import { AssemblyAI } from 'assemblyai';
 import { GLOBAL } from '../singleton';
+import Logger from '../utils/DatadogLogger';
 
 export enum AvailableModels {
     NANO = 'nano',
@@ -8,11 +9,12 @@ export enum AvailableModels {
 
 export default class AssemblyAiService {
     private client: AssemblyAI;
-
+    
     constructor() {
         this.client = new AssemblyAI({
             apiKey: process.env.ASSEMBLYAI_API_KEY as string
         });
+        Logger.withFunctionName('AssemblyAiService')
     }
 
     async getTranscript(
@@ -34,7 +36,7 @@ export default class AssemblyAiService {
         });
 
         const transcriptPath = this.saveTranscriptLocal(transcript);
-
+        Logger.info(`Transcription generated with ${transcript.words.length} words and ${transcript.utterances.length} utterances`);
         return {
             transcript,
             transcriptPath
@@ -55,7 +57,7 @@ export default class AssemblyAiService {
 
         const tempFilePath = path.join(tempDir, `transcript-${bot_id}-${Date.now()}.json`);
         fs.writeFileSync(tempFilePath, JSON.stringify(transcript));
-
+        Logger.info(`Transcription saved to ${tempFilePath}`);
         return tempFilePath;
     }
 }

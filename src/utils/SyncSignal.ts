@@ -4,6 +4,7 @@
  */
 
 import { Page } from 'playwright'
+import Logger from './DatadogLogger'
 
 interface SyncSignalOptions {
     /** Duration of the sync signal in milliseconds (default: 500) */
@@ -25,6 +26,7 @@ export async function generateSyncSignal(
     page: Page,
     options: SyncSignalOptions = {},
 ): Promise<void> {
+    Logger.withFunctionName('generateSyncSignal')
     const {
         duration = 150,
         frequency = 1000,
@@ -32,8 +34,8 @@ export async function generateSyncSignal(
         volume = 0.9,
     } = options
 
-    console.log(
-        `🎯 Generating sync signal: ${frequency}Hz beep + flash (${duration}ms)`,
+    Logger.info(
+        `Generating sync signal: ${frequency}Hz beep + flash (${duration}ms)`,
     )
 
     try {
@@ -42,10 +44,8 @@ export async function generateSyncSignal(
             generateAudioBeep(page, frequency, duration, volume),
             generateVisualFlash(page, flashColor, duration),
         ])
-
-        console.log('✅ Sync signal generated successfully')
     } catch (error) {
-        console.error('❌ Failed to generate sync signal:', error)
+        Logger.error('Failed to generate sync signal:', { error })
         throw error
     }
 }

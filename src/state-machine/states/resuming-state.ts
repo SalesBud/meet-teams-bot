@@ -4,9 +4,11 @@ import { SpeakerManager } from '../../speaker-manager'
 import { MeetingStateType, StateExecuteResult } from '../types'
 import { BaseState } from './base-state'
 import { GLOBAL } from '../../singleton'
+import Logger from '../../utils/DatadogLogger'
 
 export class ResumingState extends BaseState {
     async execute(): StateExecuteResult {
+        Logger.withFunctionName('execute')
         try {
             // Reprendre l'enregistrement
             await this.resumeRecording()
@@ -35,32 +37,30 @@ export class ResumingState extends BaseState {
             // Retourner à l'état Recording
             return this.transition(MeetingStateType.Recording)
         } catch (error) {
-            console.error('Error in resuming state:', error)
+            Logger.error('Error in resuming state:', { error })
             return this.handleError(error as Error)
         }
     }
 
     private async resumeRecording(): Promise<void> {
+        Logger.withFunctionName('resumeRecording')
         const resumePromise = async () => {
             // TODO: RESUME SCREEN RECORDER
 
             // Reprendre le streaming
             if (this.context.streamingService) {
                 this.context.streamingService.resume()
-                console.log('Streaming service resumed successfully')
             }
 
             // Resume speakers observation if it was paused
             if (this.context.speakersObserver && this.context.playwrightPage) {
-                console.log('Resuming speakers observation...')
-
                 const onSpeakersChange = async (speakers: any[]) => {
                     try {
                         await SpeakerManager.getInstance().handleSpeakerUpdate(
                             speakers,
                         )
                     } catch (error) {
-                        console.error('Error handling speaker update:', error)
+                        Logger.error('Error handling speaker update:', { error })
                     }
                 }
 
@@ -70,10 +70,7 @@ export class ResumingState extends BaseState {
                     GLOBAL.get().bot_name,
                     onSpeakersChange,
                 )
-                console.log('Speakers observation resumed')
             }
-
-            console.log('Recording resumed successfully')
         }
 
         const timeoutPromise = new Promise<void>(
@@ -87,7 +84,7 @@ export class ResumingState extends BaseState {
         try {
             await Promise.race([resumePromise(), timeoutPromise])
         } catch (error) {
-            console.error('Error or timeout in resumeRecording:', error)
+            Logger.error('Error or timeout in resumeRecording:', { error })
             throw error
         }
     }

@@ -3,6 +3,7 @@ import { ScreenRecorderManager } from '../../recording/ScreenRecorder'
 import { HtmlSnapshotService } from '../../services/html-snapshot-service'
 import { GLOBAL } from '../../singleton'
 import { Streaming } from '../../streaming'
+import Logger from '../../utils/DatadogLogger'
 
 import {
     MeetingEndReason,
@@ -13,12 +14,13 @@ import { BaseState } from './base-state'
 
 export class WaitingRoomState extends BaseState {
     async execute(): StateExecuteResult {
+        Logger.withFunctionName('execute')
         try {
-            console.info('Entering waiting room state')
+            Logger.info('Entering waiting room state')
 
             // Get meeting information
             const { meetingId, password } = await this.getMeetingInfo()
-            console.info('Meeting info retrieved', {
+            Logger.info('Meeting info retrieved', {
                 meetingId,
                 hasPassword: !!password,
             })
@@ -63,12 +65,12 @@ export class WaitingRoomState extends BaseState {
 
             // Wait for acceptance into the meeting
             await this.waitForAcceptance()
-            console.info('Successfully joined meeting')
+            Logger.info('Successfully joined meeting')
 
             // If everything is fine, move to the InCall state
             return this.transition(MeetingStateType.InCall)
         } catch (error) {
-            console.error('Error in waiting room state:', error)
+            Logger.error('Error in waiting room state:', { error })
 
             // Handle specific error types based on MeetingEndReason
             const endReason = GLOBAL.getEndReason()
@@ -91,6 +93,7 @@ export class WaitingRoomState extends BaseState {
     }
 
     private async getMeetingInfo() {
+        Logger.withFunctionName('getMeetingInfo')
         if (!this.context.browserContext) {
             throw new Error('Browser context not initialized')
         }
@@ -100,28 +103,27 @@ export class WaitingRoomState extends BaseState {
                 GLOBAL.get().meeting_url,
             )
         } catch (error) {
-            console.error('Failed to parse meeting URL:', error)
+            Logger.error('Failed to parse meeting URL:', { error })
             GLOBAL.setError(MeetingEndReason.InvalidMeetingUrl)
             throw new Error('Failed to parse meeting URL')
         }
     }
 
     private async openMeetingPage(meetingLink: string) {
+        Logger.withFunctionName('openMeetingPage')
         if (!this.context.browserContext) {
             throw new Error('Browser context not initialized')
         }
 
         try {
-            console.info('Attempting to open meeting page:', meetingLink)
             this.context.playwrightPage =
                 await this.context.provider.openMeetingPage(
                     this.context.browserContext,
                     meetingLink,
                     GLOBAL.get().streaming_input,
                 )
-            console.info('Meeting page opened successfully')
         } catch (error) {
-            console.error('Failed to open meeting page:', {
+            Logger.error('Failed to open meeting page:', {
                 error,
                 message:
                     error instanceof Error ? error.message : 'Unknown error',
@@ -137,13 +139,14 @@ export class WaitingRoomState extends BaseState {
     }
 
     private async waitForAcceptance(): Promise<void> {
+        Logger.withFunctionName('waitForAcceptance')
         if (!this.context.playwrightPage) {
             throw new Error('Meeting page not initialized')
         }
 
         const timeoutMs =
             GLOBAL.get().automatic_leave.waiting_room_timeout * 1000
-        console.info(`Setting waiting room timeout to ${timeoutMs}ms`)
+        Logger.info(`Setting waiting room timeout to ${timeoutMs}ms`)
 
         let joinSuccessful = false // Flag indicating we joined the meeting
 
@@ -155,7 +158,7 @@ export class WaitingRoomState extends BaseState {
                     const timeoutError = new Error(
                         'Waiting room timeout reached',
                     )
-                    console.error('Waiting room timeout reached', timeoutError)
+                    Logger.error('Waiting room timeout reached', { error: timeoutError })
                     reject(timeoutError)
                 }
             }, timeoutMs)
@@ -178,9 +181,9 @@ export class WaitingRoomState extends BaseState {
                     // Add a callback to notify that the join succeeded
                     () => {
                         joinSuccessful = true
-                        console.log('Join successful notification received')
+                        Logger.info('Join successful notification received')
                         if (GLOBAL.get().custom_branding_bot_path) {
-                            console.log('Custom branding is active via browser fake video capture')
+                            Logger.info('Custom branding is active via browser fake video capture')
                         }
                     },
                 )
@@ -198,15 +201,13 @@ export class WaitingRoomState extends BaseState {
     }
 
     private startDialogObserver() {
+        Logger.withFunctionName('startDialogObserver')
         // Use the global observer instead of creating a local one
         // Stopping the dialog observer is done in the cleanup state
         if (this.context.dialogObserver) {
-            console.info(
-                `Starting global dialog observer in state ${this.constructor.name}`,
-            )
             this.context.dialogObserver.setupGlobalDialogObserver()
         } else {
-            console.warn(
+            Logger.warn(
                 `Global dialog observer not available in state ${this.constructor.name}`,
             )
         }

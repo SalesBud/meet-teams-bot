@@ -2,6 +2,7 @@ import { Page } from '@playwright/test'
 import { MeetingProvider, RecordingMode } from '../types'
 import { MeetHtmlCleaner } from './meet/htmlCleaner'
 import { TeamsHtmlCleaner } from './teams/htmlCleaner'
+import Logger from '../utils/DatadogLogger'
 
 export class HtmlCleaner {
     private meetingProvider: MeetingProvider
@@ -33,24 +34,22 @@ export class HtmlCleaner {
     }
 
     public async start(): Promise<void> {
+        Logger.withFunctionName('start')
         if (this.isRunning) {
-            console.warn('HTML cleaner already running')
             return
         }
-
-        console.log(`[HtmlCleaner] Starting for ${this.meetingProvider}...`)
 
         if (this.cleaner) {
             try {
                 await this.cleaner.start()
                 this.isRunning = true
-                console.log(
-                    `[HtmlCleaner] ✅ Started for ${this.meetingProvider}`,
+                Logger.info(
+                    `[HtmlCleaner] Started for ${this.meetingProvider}`,
                 )
             } catch (error) {
-                console.error(
+                Logger.error(
                     `Failed to start ${this.meetingProvider} HTML cleaner:`,
-                    error,
+                    { error },
                 )
                 throw error
             }
@@ -58,20 +57,20 @@ export class HtmlCleaner {
     }
 
     public async stop(): Promise<void> {
+        Logger.withFunctionName('stop')
         if (!this.isRunning || !this.cleaner) {
             return
         }
 
-        console.log(`[HtmlCleaner] Stopping for ${this.meetingProvider}...`)
 
         try {
             await this.cleaner.stop()
             this.isRunning = false
-            console.log(`[HtmlCleaner] ✅ Stopped for ${this.meetingProvider}`)
+            Logger.info(`[HtmlCleaner] Stopped for ${this.meetingProvider}`)
         } catch (error) {
-            console.error(
+            Logger.warn(
                 `Failed to stop ${this.meetingProvider} HTML cleaner:`,
-                error,
+                { error },
             )
         }
     }

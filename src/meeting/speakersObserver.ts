@@ -2,6 +2,7 @@ import { Page } from '@playwright/test'
 import { MeetingProvider, RecordingMode, SpeakerData } from '../types'
 import { MeetSpeakersObserver } from './meet/speakersObserver'
 import { TeamsSpeakersObserver } from './teams/speakersObserver'
+import Logger from '../utils/DatadogLogger'
 
 export class SpeakersObserver {
     private meetingProvider: MeetingProvider
@@ -21,12 +22,12 @@ export class SpeakersObserver {
         onSpeakersChange: (speakers: SpeakerData[]) => void,
         meetingStartTime?: number,
     ): Promise<void> {
+        Logger.withFunctionName('startObserving')
         if (this.isObserving) {
-            console.warn('[SpeakersObserver] Already running')
             return
         }
 
-        console.log(
+        Logger.info(
             `[SpeakersObserver] Starting for ${this.meetingProvider}...`,
         )
 
@@ -63,20 +64,17 @@ export class SpeakersObserver {
                 await this.observer.startObserving()
                 this.isObserving = true
                 this.retryCount = 0
-                console.log(
-                    `[SpeakersObserver] ✅ Started for ${this.meetingProvider}`,
-                )
             } catch (error) {
-                console.warn(
+                Logger.warn(
                     `[SpeakersObserver] Failed to initialize (attempt ${this.retryCount + 1}/${this.maxRetries}):`,
-                    error,
+                    { error },
                 )
 
                 // Retry logic - same as before
                 if (this.retryCount < this.maxRetries) {
                     this.retryCount++
                     setTimeout(() => {
-                        console.log(
+                        Logger.info(
                             `[SpeakersObserver] Retrying (attempt ${this.retryCount}/${this.maxRetries})...`,
                         )
                         this.startObserving(
@@ -88,7 +86,7 @@ export class SpeakersObserver {
                         )
                     }, 5000)
                 } else {
-                    console.error(
+                    Logger.error(
                         `[SpeakersObserver] Max retries (${this.maxRetries}) reached. Giving up.`,
                     )
                     this.isObserving = false
@@ -103,14 +101,10 @@ export class SpeakersObserver {
             return
         }
 
-        console.log(
-            `[SpeakersObserver] Stopping for ${this.meetingProvider}...`,
-        )
         this.observer.stopObserving()
         this.observer = null
         this.isObserving = false
         this.retryCount = 0
-        console.log(`[SpeakersObserver] ✅ Stopped for ${this.meetingProvider}`)
     }
 
     public isCurrentlyObserving(): boolean {

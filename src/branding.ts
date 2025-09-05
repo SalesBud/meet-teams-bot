@@ -1,6 +1,7 @@
 import { spawn } from 'child_process'
 
 import { SoundContext, VideoContext } from './media_context'
+import Logger from './utils/DatadogLogger'
 
 export type BrandingHandle = {
     wait: Promise<void>
@@ -11,6 +12,7 @@ export function generateBranding(
     botname: string,
     custom_branding_path?: string,
 ): BrandingHandle {
+    Logger.withFunctionName('generateBranding')
     try {
         const command = (() => {
             return spawn(
@@ -20,7 +22,7 @@ export function generateBranding(
             )
         })()
         command.stderr.addListener('data', (data) => {
-            console.log(data.toString())
+            Logger.info(data.toString())
         })
 
         return {
@@ -34,16 +36,17 @@ export function generateBranding(
             },
         }
     } catch (e) {
-        console.error('fail to generate branding ', e)
+        Logger.error('fail to generate branding ', { error: e })
         return null
     }
 }
 
 export function playBranding() {
+    Logger.withFunctionName('playBranding')
     try {
         new VideoContext(0)
         VideoContext.instance.default()
     } catch (e) {
-        console.error('fail to play video branding ', e)
+        Logger.error('fail to play video branding ', { error: e })
     }
 }

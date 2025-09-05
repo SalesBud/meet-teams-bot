@@ -3,6 +3,7 @@ import { Upload } from '@aws-sdk/lib-storage'
 import * as path from 'path'
 import * as fs from 'fs'
 import { GLOBAL } from '../singleton'
+import Logger from './DatadogLogger'
 
 // Singleton instance
 let instance: S3Uploader | null = null
@@ -22,8 +23,9 @@ export class S3Uploader {
     }
 
     public static getInstance(): S3Uploader {
+        Logger.withFunctionName('getInstance')
         if (GLOBAL.isServerless()) {
-            console.log('Skipping S3 uploader - serverless mode')
+            Logger.info('Skipping S3 uploader - serverless mode')
             return null
         }
 
@@ -39,8 +41,9 @@ export class S3Uploader {
         s3Path: string
 
     ): Promise<void> {
+        Logger.withFunctionName('uploadFile')
         if (GLOBAL.isServerless()) {
-            console.log('Skipping S3 upload - serverless mode')
+            Logger.info('Skipping S3 upload - serverless mode')
             return
         }
 
@@ -56,7 +59,7 @@ export class S3Uploader {
             })
             await upload.done()
         } catch (error) {
-            console.error(`S3 upload error for ${filePath} bucket ${bucketName} s3Path ${s3Path}`, error)
+            Logger.error(`S3 upload error for ${filePath} bucket ${bucketName} s3Path ${s3Path}`, { error })
             throw error
         }
     }
@@ -65,20 +68,21 @@ export class S3Uploader {
         filePath: string,
         s3Path: string,
     ): Promise<void> {
+        Logger.withFunctionName('uploadToDefaultBucket')
         if (GLOBAL.isServerless()) {
-            console.log('Skipping S3 upload - serverless mode')
+            Logger.info('Skipping S3 upload - serverless mode')
             return
         }
 
         const bucket = GLOBAL.get().remote.aws_s3_log_bucket
         try {
             if (!bucket) {
-                console.warn('Skipping S3 upload - aws_s3_log_bucket not configured')
+                Logger.warn('Skipping S3 upload - aws_s3_log_bucket not configured')
                 return
             }
             await this.uploadFile(filePath, bucket, s3Path)
         } catch (error: any) {
-            console.error(`Failed to upload to default bucket ${bucket} ${s3Path}`, error.message)
+            Logger.error(`Failed to upload to default bucket ${bucket} ${s3Path}`, { error: error.message })
             throw error
         }
     }
@@ -88,8 +92,9 @@ export class S3Uploader {
         bucketName: string,
         s3Path: string
     ): Promise<void> {
+        Logger.withFunctionName('uploadDirectory')
         if (GLOBAL.isServerless()) {
-            console.log('Skipping S3 upload - serverless mode')
+            Logger.info('Skipping S3 upload - serverless mode')
             return
         }
 
@@ -101,11 +106,11 @@ export class S3Uploader {
                 .map(item => path.join(localDir, item.name))
 
             if (files.length === 0) {
-                console.log('No files found in directory:', localDir)
+                Logger.info('No files found in directory:', { localDir })
                 return
             }
 
-            console.log(`Starting bulk upload of ${files.length} files...`)
+            Logger.info(`Starting bulk upload of ${files.length} files...`)
 
             const results: Array<{ success: boolean; file: string; error?: string }> = []
 
@@ -115,7 +120,7 @@ export class S3Uploader {
                 const batchNumber = Math.floor(i / MAX_CONCURRENT_UPLOADS) + 1
                 const totalBatches = Math.ceil(files.length / MAX_CONCURRENT_UPLOADS)
 
-                console.log(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} files)...`)
+                Logger.info(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} files)...`)
 
                 // Upload batch concurrently using our existing uploadFile function
                 const batchPromises = batch.map(async (file) => {
@@ -136,7 +141,7 @@ export class S3Uploader {
                 const batchSuccesses = batchResults.filter(r => r.success).length
                 const batchFailures = batchResults.length - batchSuccesses
 
-                console.log(`Batch ${batchNumber} complete: ${batchSuccesses} successful, ${batchFailures} failed`)
+                Logger.info(`Batch ${batchNumber} complete: ${batchSuccesses} successful, ${batchFailures} failed`)
 
                 // Collect results
                 results.push(...batchResults)
@@ -146,13 +151,13 @@ export class S3Uploader {
             const successful = results.filter(r => r.success).length
             const failed = results.filter(r => !r.success).length
 
-            console.log(`Total upload summary: ${successful} successful, ${failed} failed`)
+            Logger.info(`Total upload summary: ${successful} successful, ${failed} failed`)
 
             if (failed > 0) {
                 throw new Error(`Bulk upload completed with ${failed} failures`)
             }
         } catch (error: any) {
-            console.error('S3 sync error:', error.message)
+            Logger.error('S3 sync error:', { error: error.message })
             throw error
         }
     }
