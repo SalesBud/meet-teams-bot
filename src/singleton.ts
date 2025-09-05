@@ -3,7 +3,7 @@ import {
     getErrorMessageFromCode,
     MeetingEndReason,
 } from './state-machine/types'
-import { MeetingParams, RecordingMode, RecordingMode, SpeechToTextProvider } from './types'
+import { MeetingParams, RecordingMode, SpeechToTextProvider } from './types'
 
 class Global {
     private meetingParams: MeetingParams | null = null
@@ -69,7 +69,7 @@ class Global {
             bots_webhook_url: process.env.BOTS_WEBHOOK_URL,
             streaming_audio_frequency: Number(process.env.STREAMING_AUDIO_FREQUENCY) || 24000,
             enter_message: process.env.ENTER_MESSAGE || 'Recording bot has joined the meeting',
-            recording_mode: recording_mode,
+            recording_mode: this.normalizeRecordingMode(recording_mode),
             local_recording_server_location: process.env.LOCAL_RECORDING_SERVER_LOCATION || 'docker',
             automatic_leave: {
                 waiting_room_timeout: Number(process.env.WAITING_ROOM_TIMEOUT) || 600,
