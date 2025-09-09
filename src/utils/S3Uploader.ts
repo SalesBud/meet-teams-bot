@@ -85,7 +85,6 @@ export class S3Uploader {
             Logger.error(`Failed to upload to default bucket ${bucket} ${s3Path}`, { error: error.message })
             throw error
         }
-        await this.uploadFile(filePath, bucket, s3Path)
     }
 
     public async uploadDirectory(
