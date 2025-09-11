@@ -43,7 +43,7 @@ if (DEBUG_LOGS) {
 // ========================================
 
 /**
- * Read and parse meeting parameters from stdin
+ * Initialize meeting parameters from environment variables
  */
 async function initializeMeetingParams(): Promise<void> {
     try {

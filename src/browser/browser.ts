@@ -17,7 +17,6 @@ export async function openBrowser(
         // Get Chrome path from environment variable or use default
         const chromePath = process.env.CHROME_PATH || '/usr/bin/google-chrome'
 
-        // Check if branding video file exists and determine best format
         const finalBrandingPath = await getBrandingPath(brandingVideoPath)
 
         // Build Chrome arguments dynamically
@@ -82,10 +81,9 @@ export async function openBrowser(
             chromeArgs.push(`--use-file-for-fake-video-capture=${finalBrandingPath}`)
         }
 
-        const context = await chromium.launchPersistentContext('', {
+        const launchOptions: any = {
             headless: false,
             viewport: { width, height },
-            executablePath: chromePath,
             args: chromeArgs,
             slowMo: slowMo ? 100 : undefined,
             permissions: ['microphone', 'camera'],
@@ -93,7 +91,14 @@ export async function openBrowser(
             acceptDownloads: true,
             bypassCSP: true,
             timeout: 120000,
-        })
+        }
+
+        // Only set executablePath if we found Chrome, otherwise use Playwright's bundled browser
+        if (chromePath) {
+            launchOptions.executablePath = chromePath
+        }
+
+        const context = await chromium.launchPersistentContext('', launchOptions)
 
         return { browser: context }
     } catch (error) {
