@@ -7,14 +7,15 @@ import { GLOBAL } from '../singleton'
 import { MeetingBotStatus } from '../constants/Transcript'
 import { getErrorMessageFromCode } from '../state-machine/types'
 import { S3Uploader } from '../utils/S3Uploader'
+import Logger from '../utils/DatadogLogger'
 
 export const EVENT_TYPE = 'CREATE_TRANSCRIPTION'
 const GENERAL_ERROR_CODE = 'TranscriptionProcessFailed'
 
 export default class TranscriptionProcess {
     public async createTranscriptionData() {
+        Logger.withFunctionName('createTranscriptionData')
         const bot_id = GLOBAL.get().bot_uuid
-        console.info(`Starting create transcription for bot_id: ${bot_id}`)
 
         try {
             const bucketService = new RecordingBucketService()
@@ -25,7 +26,7 @@ export default class TranscriptionProcess {
             )
 
             if (!speakersLog) {
-                console.error('Failed to process speaker_separation.log file', {
+                Logger.error('Failed to process speaker_separation.log, file not found', {
                     bot_id,
                 })
                 return {
@@ -35,24 +36,34 @@ export default class TranscriptionProcess {
                 }
             }
 
-            const { minSpeakersExpected, maxSpeakersExpected, speakers } =
-                countUniqueSpeakers(speakersLog)
+            const { minSpeakersExpected, maxSpeakersExpected, speakers } = countUniqueSpeakers(speakersLog);
 
-            console.info(
+            Logger.info(
                 `Processing transcription with ${minSpeakersExpected} to ${maxSpeakersExpected} expected speakers for bot_id: ${bot_id}`,
                 {
                     speakers,
                 },
             )
 
-            if (minSpeakersExpected === 0) {
-                console.error(
+            if (maxSpeakersExpected === 0) {
+                Logger.error(
                     `No speakers detected during recording for bot_id: ${bot_id}`,
                 )
                 return {
                     event: MeetingBotStatus.FAILED,
                     error: GENERAL_ERROR_CODE,
                     message: 'No speakers detected during recording.',
+                }
+            }
+
+            if (!audioUrl) {
+                Logger.error('Failed to get audio url for bot_id: ${bot_id}', {
+                    bot_id,
+                })
+                return {
+                    event: MeetingBotStatus.FAILED,
+                    error: GENERAL_ERROR_CODE,
+                    message: 'Failed to get audio url from S3',
                 }
             }
 
@@ -69,7 +80,7 @@ export default class TranscriptionProcess {
                 transcript?.words?.length < minWordsLength ||
                 transcript.error
             ) {
-                console.error(
+                Logger.error(
                     `Insufficient words (${transcript?.words?.length}) in transcript for bot_id: ${bot_id}`,
                     {
                         error: transcript.error ?? 'unknown error',
@@ -83,7 +94,7 @@ export default class TranscriptionProcess {
             }
 
             if (!transcript?.utterances) {
-                console.error(
+                Logger.error(
                     `No utterances found in transcript for bot_id: ${bot_id}`,
                     {
                         error: transcript.error ?? 'unknown error',
@@ -111,7 +122,7 @@ export default class TranscriptionProcess {
                     unifiedTalks,
                 )
 
-            console.info(
+            Logger.info(
                 'Create transcription data completed, building bot data to webhook',
             )
             return this.buildBotDataToWebhook(
@@ -122,7 +133,7 @@ export default class TranscriptionProcess {
         } catch (error) {
             const errorMessage =
                 error instanceof Error ? error.message : String(error)
-            console.error('Fatal error in create transcription', {
+            Logger.error('Fatal error in create transcription', {
                 eventType: EVENT_TYPE,
                 error: errorMessage,
                 bot_id,
@@ -208,6 +219,7 @@ export default class TranscriptionProcess {
     }
 
     private async saveTranscriptToS3(transcriptPath: string, bot_id: string) {
+        Logger.withFunctionName('saveTranscriptToS3')
         try {
             const bucketName = GLOBAL.get().remote.aws_s3_video_bucket
             const s3Uploader = S3Uploader.getInstance()
@@ -217,7 +229,7 @@ export default class TranscriptionProcess {
                 `${bot_id}/transcript.json`,
             )
         } catch (error) {
-            console.warn('Error saving transcript to S3', {
+            Logger.warn('Error saving transcript on S3', {
                 error: error instanceof Error ? error.message : String(error),
             })
         }

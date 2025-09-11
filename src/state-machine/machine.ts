@@ -8,6 +8,7 @@ import { MeetingProviderInterface } from '../types'
 import { getStateInstance } from './states'
 import { MeetingContext } from './types'
 import { NORMAL_END_REASONS } from './constants'
+import Logger from '../utils/DatadogLogger'
 
 export class MeetingStateMachine {
     static instance: MeetingStateMachine | null = null
@@ -16,11 +17,12 @@ export class MeetingStateMachine {
     private provider: MeetingProviderInterface
 
     static init() {
+        Logger.withFunctionName('init')
         if (MeetingStateMachine.instance == null) {
             MeetingStateMachine.instance = new MeetingStateMachine()
-            console.log(
+            Logger.info(
                 '*** INIT MeetingStateMachine.instance',
-                GLOBAL.get().meeting_url,
+                { meeting_url: GLOBAL.get().meeting_url },
             )
         }
     }
@@ -41,9 +43,10 @@ export class MeetingStateMachine {
     }
 
     public async start(): Promise<void> {
+        Logger.withFunctionName('start')
         try {
             while (this.currentState !== MeetingStateType.Terminated) {
-                console.info(`Current state: ${this.currentState}`)
+                Logger.info(`Current state: ${this.currentState}`)
 
                 // Execute current state and transition to next
                 const state = getStateInstance(this.currentState, this.context)
@@ -60,7 +63,8 @@ export class MeetingStateMachine {
     }
 
     public async requestStop(reason: MeetingEndReason): Promise<void> {
-        console.info(`Stop requested with reason: ${reason}`)
+        Logger.withFunctionName('requestStop')
+        Logger.info(`Stop requested with reason: ${reason}`)
         GLOBAL.setEndReason(reason)
     }
 
@@ -87,21 +91,23 @@ export class MeetingStateMachine {
     }
 
     public async pauseRecording(): Promise<void> {
+        Logger.withFunctionName('pauseRecording')
         if (this.currentState !== MeetingStateType.Recording) {
             throw new Error('Cannot pause: meeting is not in recording state')
         }
 
-        console.info('Pause requested')
+        Logger.info('Pause requested')
         this.context.isPaused = true
         this.currentState = MeetingStateType.Paused
     }
 
     public async resumeRecording(): Promise<void> {
+        Logger.withFunctionName('resumeRecording')
         if (this.currentState !== MeetingStateType.Paused) {
             throw new Error('Cannot resume: meeting is not paused')
         }
 
-        console.info('Resume requested')
+        Logger.info('Resume requested')
         this.context.isPaused = false
         this.currentState = MeetingStateType.Resuming
     }
@@ -144,16 +150,17 @@ export class MeetingStateMachine {
                 )
             }
         } catch (error) {
-            console.error(
+            Logger.error(
                 'Error in startRecordMeeting:',
-                error instanceof Error ? error.message : error,
+                { error: error instanceof Error ? error.message : error },
             )
             throw error
         }
     }
 
     public async stopMeeting(reason: MeetingEndReason): Promise<void> {
-        console.info(`Stop meeting requested with reason: ${reason}`)
+        Logger.withFunctionName('stopMeeting')
+        Logger.info(`Stop meeting requested with reason: ${reason}`)
         GLOBAL.setEndReason(reason)
     }
 

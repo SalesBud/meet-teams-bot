@@ -8,6 +8,7 @@ import { GLOBAL } from '../singleton'
 import { parseMeetingUrlFromJoinInfos } from '../urlParser/meetUrlParser'
 import { sleep } from '../utils/sleep'
 import { closeMeeting } from './meet/closeMeeting'
+import Logger from '../utils/DatadogLogger'
 
 export class MeetProvider implements MeetingProviderInterface {
     async parseMeetingUrl(meeting_url: string) {
@@ -28,8 +29,8 @@ export class MeetProvider implements MeetingProviderInterface {
         link: string,
         streaming_input: string | undefined,
     ): Promise<Page> {
+        Logger.withFunctionName('openMeetingPage')
         try {
-            console.log('Creating new page in existing context...')
             const page = await browserContext.newPage()
 
             // Set permissions based on streaming_input
@@ -39,16 +40,15 @@ export class MeetProvider implements MeetingProviderInterface {
                 await browserContext.grantPermissions(['camera'])
             }
 
-            console.log(`Navigating to ${link}...`)
+            Logger.info(`Navigating to ${link}...`)
             await page.goto(link, {
                 waitUntil: 'networkidle',
                 timeout: 30000,
             })
-            console.log('Navigation completed')
 
             return page
         } catch (error) {
-            console.error('openMeetingPage error:', {
+            Logger.error('openMeetingPage error:', {
                 message: (error as Error).message,
                 stack: (error as Error).stack,
                 name: (error as Error).name,
@@ -62,6 +62,7 @@ export class MeetProvider implements MeetingProviderInterface {
         cancelCheck: () => boolean,
         onJoinSuccess: () => void,
     ): Promise<void> {
+        Logger.withFunctionName('joinMeeting')
         try {
             // Capture DOM state before starting join process
             const htmlSnapshot = HtmlSnapshotService.getInstance()
@@ -70,19 +71,21 @@ export class MeetProvider implements MeetingProviderInterface {
             await clickDismiss(page)
             await sleep(300)
 
-            console.log(
+            Logger.info(
                 'useWithoutAccountClicked:',
-                await clickWithInnerText(
-                    page,
-                    'span',
-                    ['Use without an account'],
-                    2,
-                ),
+                {
+                    result: await clickWithInnerText(
+                        page,
+                        'span',
+                        ['Use without an account'],
+                        2,
+                    )
+                },
             )
 
             for (let attempt = 1; attempt <= 5; attempt++) {
                 if (await typeBotName(page, GLOBAL.get().bot_name)) {
-                    console.log('Bot name typed at attempt', attempt)
+                    Logger.info('Bot name typed at attempt', { attempt })
                     break
                 }
                 await clickOutsideModal(page)
@@ -102,7 +105,7 @@ export class MeetProvider implements MeetingProviderInterface {
 
             // Alternating between span and button selectors for 5 iterations total
             for (let attempt = 1; attempt <= joinButtonMaxAttempts; attempt++) {
-                console.log(
+                Logger.info(
                     `Join button search attempt ${attempt}/${joinButtonMaxAttempts}`,
                 )
 
@@ -115,7 +118,7 @@ export class MeetProvider implements MeetingProviderInterface {
                         1, // Only try once per iteration
                     )
                     if (askToJoinClicked) {
-                        console.log(
+                        Logger.info(
                             `Found join button in span element on attempt ${attempt}`,
                         )
                         break
@@ -137,7 +140,7 @@ export class MeetProvider implements MeetingProviderInterface {
                         1, // Only try once per iteration
                     )
                     if (askToJoinClicked) {
-                        console.log(
+                        Logger.info(
                             `Found join button in button element on attempt ${attempt}`,
                         )
                         break
@@ -151,7 +154,7 @@ export class MeetProvider implements MeetingProviderInterface {
             }
 
             if (!askToJoinClicked) {
-                console.log(
+                Logger.info(
                     'All attempts with alternating selectors failed, trying by aria-label',
                 )
 
@@ -161,17 +164,17 @@ export class MeetProvider implements MeetingProviderInterface {
                         'button[aria-label*="Join"], button[aria-label*="join now"]',
                     )
                     const count = await joinButtons.count()
-                    console.log(
+                    Logger.info(
                         `Found ${count} buttons with Join in aria-label`,
                     )
 
                     if (count > 0) {
                         await joinButtons.first().click()
-                        console.log('Clicked join button by aria-label')
+                        Logger.info('Clicked join button by aria-label')
                         askToJoinClicked = true
                     }
                 } catch (e) {
-                    console.error('Error trying to click by aria-label:', e)
+                    Logger.error('Error trying to click by aria-label:', { error: e })
                 }
             }
 
@@ -181,15 +184,16 @@ export class MeetProvider implements MeetingProviderInterface {
             }
 
             // Wait to be in the meeting with regular cancelCheck verification
-            console.log('Waiting to confirm meeting join...')
+            Logger.info('Waiting to confirm meeting join...')
+            let count = 0
             while (true) {
                 if (cancelCheck()) {
                     GLOBAL.setError(MeetingEndReason.ApiRequest)
                     throw new Error('API request to stop recording')
                 }
 
-                if (await isInMeeting(page)) {
-                    console.log('Successfully confirmed we are in the meeting')
+                if (await isInMeeting(page, count)) {
+                    Logger.info('Successfully confirmed we are in the meeting')
                     onJoinSuccess()
                     break
                 }
@@ -199,6 +203,7 @@ export class MeetProvider implements MeetingProviderInterface {
                 }
 
                 await sleep(1000)
+                count++
             }
 
             // Once in the meeting, execute all post-join actions
@@ -208,7 +213,7 @@ export class MeetProvider implements MeetingProviderInterface {
             await htmlSnapshot.captureSnapshot(page, 'meet_join_meeting_success')
 
             if (GLOBAL.get().enter_message) {
-                console.log('Sending entry message...')
+                Logger.info('Sending entry message...')
                 await sendEntryMessage(page, GLOBAL.get().enter_message)
                 await sleep(100)
             }
@@ -221,12 +226,12 @@ export class MeetProvider implements MeetingProviderInterface {
 
                 for (let attempt = 1; attempt <= maxAttempts; attempt++) {
                     if (await changeLayout(page, attempt)) {
-                        console.log(
+                        Logger.info(
                             `Layout change successful on attempt ${attempt}`,
                         )
                         break
                     }
-                    console.log(`Attempt ${attempt} failed`)
+                    Logger.warn(`Attempt ${attempt} failed`)
                     await clickOutsideModal(page)
                     await page.waitForTimeout(500)
                 }
@@ -235,11 +240,11 @@ export class MeetProvider implements MeetingProviderInterface {
             if (GLOBAL.get().recording_mode !== 'gallery_view') {
                 // Capture DOM state before opening people panel
                 await htmlSnapshot.captureSnapshot(page, 'meet_people_panel_before_open')
-                
+
                 await findShowEveryOne(page, true, cancelCheck)
             }
         } catch (error) {
-            console.error('Error in joinMeeting:', {
+            Logger.error('Error in joinMeeting:', {
                 message: (error as Error).message,
                 stack: (error as Error).stack,
             })
@@ -260,7 +265,7 @@ export class MeetProvider implements MeetingProviderInterface {
                     ),
                 ])
             } catch (e) {
-                console.log('Page appears to be frozen for 30 seconds')
+                Logger.warn('Page appears to be frozen for 30 seconds')
                 return true
             }
 
@@ -279,16 +284,16 @@ export class MeetProvider implements MeetingProviderInterface {
                 )
 
                 if (foundMessage) {
-                    console.log(
+                    Logger.info(
                         'End meeting detected through page content:',
-                        foundMessage,
+                        { foundMessage },
                     )
                     return true
                 }
             }
             return false
         } catch (error) {
-            console.error('Error in findEndMeeting:', error)
+            Logger.warn('Error in findEndMeeting:', { error })
             return false
         }
     }
@@ -310,9 +315,9 @@ async function findShowEveryOne(
     while (!showEveryOneFound) {
         try {
             // Check if we are actually in the meeting
-            inMeetingConfirmed = await isInMeeting(page)
+            inMeetingConfirmed = await isInMeeting(page, i)
             if (inMeetingConfirmed) {
-                console.log('Successfully confirmed we are in the meeting')
+                Logger.info('Successfully confirmed we are in the meeting')
             }
 
             // Chercher le bouton People comme avant
@@ -330,9 +335,8 @@ async function findShowEveryOne(
             if (showEveryOneFound && click) {
                 try {
                     await buttons.first().click()
-                    console.log('Successfully clicked People button')
                 } catch (e) {
-                    console.log('Failed to click People button:', e)
+                    Logger.info('Failed to click People button:', { error: e })
                     showEveryOneFound = false
                 }
             }
@@ -340,7 +344,7 @@ async function findShowEveryOne(
             // If we did not find the button but we are in the meeting,
             // on considère que c'est un succès (certaines réunions n'ont pas ce bouton)
             if (!showEveryOneFound && inMeetingConfirmed) {
-                console.log(
+                Logger.warn(
                     'Meeting confirmed but People button not found - continuing anyway',
                 )
                 return
@@ -352,7 +356,8 @@ async function findShowEveryOne(
             }
 
             if (await notAcceptedInMeeting(page)) {
-                console.log('Bot not accepted, exiting meeting')
+                Logger.warn('Bot not accepted, exiting meeting')
+                GLOBAL.setError(MeetingEndReason.BotNotAccepted)
                 throw new Error('Bot not accepted into meeting')
             }
 
@@ -361,18 +366,18 @@ async function findShowEveryOne(
             }
             i++
         } catch (error) {
-            console.error('Error in findShowEveryOne:', error)
+            Logger.warn('Error in findShowEveryOne:', { error })
             await sleep(1000)
         }
     }
 }
 
 // New function to check if we are actually in the meeting
-async function isInMeeting(page: Page): Promise<boolean> {
+async function isInMeeting(page: Page, count: number = 0): Promise<boolean> {
     try {
         // First check if we have been removed from the meeting
         if (await notAcceptedInMeeting(page)) {
-            console.log('Bot has been removed from the meeting')
+            Logger.warn('Bot has been removed from the meeting')
             return false
         }
 
@@ -397,12 +402,14 @@ async function isInMeeting(page: Page): Promise<boolean> {
         ]
 
         const confirmedIndicators = indicators.filter(Boolean).length
-        console.log(`Meeting presence indicators: ${confirmedIndicators}/3`)
+        if (count > 0 && count % 30 === 0) {
+            Logger.info(`Meeting presence indicators: ${confirmedIndicators}/3 - ${count}`)
+        }
 
         // We consider we are in the meeting if at least 2 indicators are present
         return confirmedIndicators >= 2
     } catch (error) {
-        console.error('Error checking if in meeting:', error)
+        Logger.error('Error checking if in meeting:', { error })
         return false
     }
 }
@@ -411,10 +418,10 @@ async function sendEntryMessage(
     page: Page,
     enterMessage: string,
 ): Promise<boolean> {
-    console.log('Attempting to send entry message...')
+    Logger.withFunctionName('sendEntryMessage')
     // First check if we are still in the meeting
     if (!(await isInMeeting(page))) {
-        console.log(
+        Logger.warn(
             'Bot is no longer in the meeting, cannot send entry message',
         )
         return false
@@ -431,7 +438,7 @@ async function sendEntryMessage(
 
         // Check again if we are still in the meeting
         if (!(await isInMeeting(page))) {
-            console.log('Bot is no longer in the meeting after opening chat')
+            Logger.warn('Bot is no longer in the meeting after opening chat')
             return false
         }
 
@@ -443,14 +450,13 @@ async function sendEntryMessage(
         const sendButton = page.locator('button:has(i:text("send"))')
         if ((await sendButton.count()) > 0) {
             await sendButton.click()
-            console.log('Clicked on send button')
             await page.click('button[aria-label="Chat with everyone"]')
             return true
         }
-        console.log('Send button not found')
+        Logger.warn('Send button not found')
         return false
     } catch (error) {
-        console.error('Failed to send entry message:', error)
+        Logger.warn('Failed to send entry message:', { error })
         return false
     }
 }
@@ -501,8 +507,7 @@ async function notAcceptedInMeeting(page: Page): Promise<boolean> {
     for (const text of deniedTexts) {
         const element = page.locator(`text=${text}`)
         if ((await element.count()) > 0) {
-            // User has denied entry
-            console.log('XXXXXXXXXXXXXXXXXX User has denied entry')
+            Logger.warn('User has denied entry to enter the meeting')
             GLOBAL.setError(MeetingEndReason.BotNotAccepted)
             return true
         }
@@ -523,7 +528,7 @@ async function clickDismiss(page: Page): Promise<boolean> {
         }
         return false
     } catch (e) {
-        console.error('[joinMeeting] meet find dismiss', e)
+        Logger.error('[joinMeeting] meet find dismiss', { error: e })
         return false
     }
 }
@@ -535,7 +540,8 @@ async function clickWithInnerText(
     maxAttempts: number,
     shouldClick: boolean = true,
 ): Promise<boolean> {
-    console.log(
+    Logger.withFunctionName('clickWithInnerText')
+    Logger.info(
         `Attempting to find ${selector} with texts: ${texts.join(', ')}`,
     )
 
@@ -564,14 +570,10 @@ async function clickWithInnerText(
                             ariaLabel: el.getAttribute('aria-label'),
                         }))
                 })
-                console.log(
-                    'Visible buttons:',
-                    JSON.stringify(visibleButtons, null, 2),
-                )
             }
 
             for (const text of texts) {
-                console.log(
+                Logger.info(
                     `Attempt ${i + 1}/${maxAttempts} - Looking for "${text}" in ${selector}`,
                 )
 
@@ -586,15 +588,15 @@ async function clickWithInnerText(
                 for (const sel of selectors) {
                     const element = page.locator(sel)
                     const count = await element.count()
-                    console.log(`  - Selector "${sel}" found ${count} elements`)
+                    Logger.info(`  - Selector "${sel}" found ${count} elements`)
 
                     if (count > 0) {
-                        console.log(
+                        Logger.info(
                             `  - Found element with text "${text}" using selector "${sel}"`,
                         )
                         if (shouldClick) {
                             await element.click()
-                            console.log(
+                            Logger.info(
                                 `  - Clicked on element with text "${text}"`,
                             )
                         }
@@ -603,21 +605,13 @@ async function clickWithInnerText(
                 }
             }
         } catch (e) {
-            console.error(
+            Logger.warn(
                 `Error in clickWithInnerText (attempt ${i + 1}/${maxAttempts}):`,
-                e,
+                { error: e },
             )
         }
         await page.waitForTimeout(100 + i * 100)
     }
-
-    // Log all visible text on the page as a last resort
-    console.log(
-        'All visible text on page:',
-        await page.evaluate(() => {
-            return document.body.innerText.slice(0, 1000) + '...'
-        }),
-    )
 
     return false
 }
@@ -627,9 +621,7 @@ async function changeLayout(
     currentAttempt = 1,
     maxAttempts = 3,
 ): Promise<boolean> {
-    console.log(
-        `Starting layout change process (attempt ${currentAttempt}/${maxAttempts})...`,
-    )
+    Logger.withFunctionName('changeLayout')
 
     try {
         // Capture DOM state before layout change operation (first attempt only)
@@ -640,7 +632,7 @@ async function changeLayout(
 
         // First check if we are still in the meeting
         if (!(await isInMeeting(page))) {
-            console.log(
+            Logger.info(
                 'Bot is no longer in the meeting, stopping layout change',
             )
             return false
@@ -650,15 +642,14 @@ async function changeLayout(
         await page
             .waitForLoadState('networkidle', { timeout: 5000 })
             .catch(() => {
-                console.log('Network idle timeout, continuing anyway...')
+                Logger.warn('Network idle timeout, continuing anyway...')
             })
 
         // 1. Cliquer sur le bouton "More options"
-        console.log('Looking for More options button in call controls...')
-        
+
         // Capture DOM state before clicking More options
         await htmlSnapshot.captureSnapshot(page, `meet_layout_change_before_more_options_attempt_${currentAttempt}`)
-        
+
         const moreOptionsButton = page.locator(
             'div[role="region"][aria-label="Call controls"] button[aria-label="More options"]',
         )
@@ -668,37 +659,35 @@ async function changeLayout(
 
         // Check again if we are still in the meeting
         if (!(await isInMeeting(page))) {
-            console.log(
+            Logger.info(
                 'Bot is no longer in the meeting after clicking More options',
             )
             return false
         }
 
         // 2. Cliquer sur "Change layout" ou "Adjust view"
-        console.log('Looking for Change layout/Adjust view menu item...')
-        
+
         // Capture DOM state after More options menu opens
         await htmlSnapshot.captureSnapshot(page, `meet_layout_change_more_options_menu_open_attempt_${currentAttempt}`)
-        
+
         const changeLayoutItem = page.locator(
             '[role="menu"] [role="menuitem"]:has(span:has-text("Change layout"), span:has-text("Adjust view"))',
         )
         await changeLayoutItem.waitFor({ state: 'visible', timeout: 3000 })
         await htmlSnapshot.captureSnapshot(page, `meet_layout_change_change_layout_menu_item_found_attempt_${currentAttempt}`)
-        
+
         await changeLayoutItem.click()
         await page.waitForTimeout(500)
 
         // Check again if we are still in the meeting
         if (!(await isInMeeting(page))) {
-            console.log(
+            Logger.info(
                 'Bot is no longer in the meeting after clicking Change layout',
             )
             return false
         }
 
         // 3. Cliquer sur "Spotlight"
-        console.log('Looking for Spotlight option...')
         const spotlightOption = page.locator(
             [
                 'label:has-text("Spotlight"):has(input[type="radio"])',
@@ -708,16 +697,14 @@ async function changeLayout(
         )
 
         const count = await spotlightOption.count()
-        console.log(`Found ${count} Spotlight options`)
 
         await spotlightOption.waitFor({ state: 'visible', timeout: 3000 })
-        console.log('Clicking Spotlight option...')
         await spotlightOption.click()
         await page.waitForTimeout(500)
 
         // Check one last time if we are still in the meeting
         if (!(await isInMeeting(page))) {
-            console.log(
+            Logger.info(
                 'Bot is no longer in the meeting after clicking Spotlight',
             )
             return false
@@ -726,17 +713,17 @@ async function changeLayout(
         await clickOutsideModal(page)
         return true
     } catch (error) {
-        console.error(`Error in changeLayout attempt ${currentAttempt}:`, {
+        Logger.warn(`Error in changeLayout attempt ${currentAttempt}:`, {
             message: (error as Error).message,
             stack: (error as Error).stack,
         })
-        
-        
+
+
         const htmlSnapshot = HtmlSnapshotService.getInstance()
         await htmlSnapshot.captureSnapshot(page, `meet_layout_change_operation_failure_attempt_${currentAttempt}`)
-        
+
         if (currentAttempt < maxAttempts) {
-            console.log(
+            Logger.info(
                 `Retrying layout change (attempt ${currentAttempt + 1}/${maxAttempts})...`,
             )
             await page.waitForTimeout(1000)
@@ -756,6 +743,7 @@ async function clickOutsideModal(page: Page) {
 }
 
 async function typeBotName(page: Page, botName: string): Promise<boolean> {
+    Logger.withFunctionName('typeBotName')
     const INPUT = 'input[type=text]'
     const BotNameTyped = botName || 'Bot'
 
@@ -772,13 +760,13 @@ async function typeBotName(page: Page, botName: string): Promise<boolean> {
         const inputValue = await page.inputValue(INPUT)
         return inputValue.includes(BotNameTyped)
     } catch (e) {
-        console.error('error in typeBotName', e)
+        Logger.warn('error in typeBotName', { error: e })
         return false
     }
 }
 
 async function activateMicrophone(page: Page): Promise<boolean> {
-    console.log('Activating microphone...')
+    Logger.withFunctionName('activateMicrophone')
     try {
         // Look for the microphone button that's turned off
         const microphoneButton = page.locator(
@@ -786,20 +774,20 @@ async function activateMicrophone(page: Page): Promise<boolean> {
         )
         if ((await microphoneButton.count()) > 0) {
             await microphoneButton.click()
-            console.log('Microphone activated successfully')
+            Logger.info('Microphone activated successfully')
             return true
         } else {
-            console.log('Microphone is already active or button not found')
+            Logger.info('Microphone is already active or button not found')
             return false
         }
     } catch (error) {
-        console.error('Error activating microphone:', error)
+        Logger.warn('Error activating microphone:', { error })
         return false
     }
 }
 
 async function deactivateMicrophone(page: Page): Promise<boolean> {
-    console.log('Deactivating microphone...')
+    Logger.withFunctionName('deactivateMicrophone')
     try {
         // Look for the microphone button that's turned on
         const microphoneButton = page.locator(
@@ -807,14 +795,14 @@ async function deactivateMicrophone(page: Page): Promise<boolean> {
         )
         if ((await microphoneButton.count()) > 0) {
             await microphoneButton.click()
-            console.log('Microphone deactivated successfully')
+            Logger.info('Microphone deactivated successfully')
             return true
         } else {
-            console.log('Microphone is already deactivated or button not found')
+            Logger.info('Microphone is already deactivated or button not found')
             return false
         }
     } catch (error) {
-        console.error('Error deactivating microphone:', error)
+        Logger.warn('Error deactivating microphone:', { error })
         return false
     }
 }

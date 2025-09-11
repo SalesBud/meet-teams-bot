@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test'
 import { RecordingMode } from '../../types'
 import { HtmlSnapshotService } from '../../services/html-snapshot-service'
+import Logger from '../../utils/DatadogLogger'
 
 export class MeetHtmlCleaner {
     private page: Page
@@ -12,7 +13,7 @@ export class MeetHtmlCleaner {
     }
 
     public async start(): Promise<void> {
-        console.log('[Meet] Starting HTML cleaner')
+        Logger.withFunctionName('start')
 
         // Capture DOM state before starting HTML cleaning
         const htmlSnapshot = HtmlSnapshotService.getInstance()
@@ -290,7 +291,6 @@ export class MeetHtmlCleaner {
             }
 
             // Execute Meet provider
-            console.log('[Meet] Executing HTML provider')
             await removeInitialShityHtml(recordingMode)
 
             // Setup continuous cleanup
@@ -306,12 +306,11 @@ export class MeetHtmlCleaner {
             }
 
             ;(window as any).htmlCleanerObserver = observer
-            console.log('[Meet] HTML provider complete')
         }, this.recordingMode)
     }
 
     public async stop(): Promise<void> {
-        console.log('[Meet] Stopping HTML cleaner')
+        Logger.withFunctionName('stop')
 
         await this.page
             .evaluate(() => {
@@ -320,8 +319,6 @@ export class MeetHtmlCleaner {
                     delete (window as any).htmlCleanerObserver
                 }
             })
-            .catch((e) => console.error('[Meet] HTML cleaner stop error:', e))
-
-        console.log('[Meet] HTML cleaner stopped')
+            .catch((e) => Logger.error('[Meet] HTML cleaner stop error:', { error: e }))
     }
 }

@@ -8,6 +8,7 @@ import {
     StateExecuteResult,
 } from '../types'
 import { BaseState } from './base-state'
+import Logger from '../../utils/DatadogLogger'
 
 export class ErrorState extends BaseState {
     async execute(): StateExecuteResult {
@@ -24,13 +25,15 @@ export class ErrorState extends BaseState {
             // Move to cleanup
             return this.transition(MeetingStateType.Cleanup)
         } catch (error) {
-            console.error('Error in ErrorState:', error)
+            Logger.withFunctionName('execute')
+            Logger.error('Error in ErrorState:', { error })
             // Even if error handling fails, transition to cleanup
             return this.transition(MeetingStateType.Cleanup)
         }
     }
 
     private async logError(): Promise<void> {
+        Logger.withFunctionName('logError')
         const errorMessage = GLOBAL.getErrorMessage()
         const endReason = GLOBAL.getEndReason()
 
@@ -41,7 +44,7 @@ export class ErrorState extends BaseState {
         }
 
         if (!endReason) {
-            console.error('Unknown error occurred')
+            Logger.warn('Unknown error occurred')
             return
         }
 
@@ -57,21 +60,22 @@ export class ErrorState extends BaseState {
         }
 
         // Log the error with all details
-        console.error('Meeting error occurred:', errorDetails)
+        Logger.error('Meeting error occurred:', errorDetails)
     }
 
     private async notifyError(): Promise<void> {
+        Logger.withFunctionName('notifyError')
         const notifyPromise = async (): Promise<void> => {
             const endReason = GLOBAL.getEndReason()
             const errorMessage = GLOBAL.getErrorMessage()
 
             if (!endReason) {
-                console.warn('No error reason found in global singleton')
+                Logger.warn('No error reason found in global singleton')
                 return
             }
 
             // Full log for debugging
-            console.log('Error in notifyError:', {
+            Logger.warn('Error in notifyError:', {
                 reason: endReason,
                 message: errorMessage,
             })
@@ -94,17 +98,17 @@ export class ErrorState extends BaseState {
                         await Events.invalidMeetingUrl()
                         break
                     case MeetingEndReason.ApiRequest:
-                        console.log('Notifying API request stop')
+                        Logger.warn('Notifying API request stop')
                         await Events.apiRequestStop()
                         break
                     default:
-                        console.log(`Unhandled error reason: ${endReason}`)
+                        Logger.warn(`Unhandled error reason: ${endReason}`)
                         await Events.meetingError(
                             new Error(errorMessage || 'Unknown error'),
                         )
                 }
             } catch (eventError) {
-                console.error('Failed to send event notification:', eventError)
+                Logger.error('Failed to send event notification:', { error: eventError })
             }
         }
 
@@ -120,12 +124,13 @@ export class ErrorState extends BaseState {
         try {
             await Promise.race([notifyPromise(), timeoutPromise])
         } catch (error) {
-            console.error('Error notification timed out:', error)
+            Logger.error('Error notification timed out:', { error })
             // Continue even if notification fails
         }
     }
 
     private updateMetrics(): void {
+        Logger.withFunctionName('updateMetrics')
         const endReason = GLOBAL.getEndReason()
         const errorMessage = GLOBAL.getErrorMessage()
 
@@ -145,6 +150,6 @@ export class ErrorState extends BaseState {
         }
 
         // Log metrics
-        console.info('Error metrics:', metrics)
+        Logger.info('Error metrics:', metrics)
     }
 }

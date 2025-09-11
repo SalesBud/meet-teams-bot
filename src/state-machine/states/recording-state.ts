@@ -12,6 +12,7 @@ import { BaseState } from './base-state'
 import { ScreenRecorderManager, AudioWarningEvent } from '../../recording/ScreenRecorder'
 import { GLOBAL } from '../../singleton'
 import { sleep } from '../../utils/sleep'
+import Logger from '../../utils/DatadogLogger'
 
 // Sound level threshold for considering activity (0-100)
 const SOUND_LEVEL_ACTIVITY_THRESHOLD = 5
@@ -23,9 +24,8 @@ export class RecordingState extends BaseState {
     private readonly SILENCE_CONFIRMATION_MS = 45000 // 45 seconds of silence before confirming no attendees
 
     async execute(): StateExecuteResult {
+        Logger.withFunctionName('execute')
         try {
-            console.info('Starting recording state')
-
             // Initialize recording
             await this.initializeRecording()
 
@@ -45,7 +45,7 @@ export class RecordingState extends BaseState {
                     Date.now() - startTime >
                     MEETING_CONSTANTS.RECORDING_TIMEOUT
                 ) {
-                    console.warn(
+                    Logger.warn(
                         'Global recording state timeout reached, forcing end',
                     )
                     GLOBAL.setEndReason(MeetingEndReason.RecordingTimeout)
@@ -59,7 +59,7 @@ export class RecordingState extends BaseState {
                 const { shouldEnd, reason } = await this.checkEndConditions()
 
                 if (shouldEnd) {
-                    console.info(`Meeting end condition met: ${reason}`)
+                    Logger.info(`Meeting end condition met: ${reason}`)
                     // Set the end reason in the global singleton
                     GLOBAL.setEndReason(reason)
                     await this.handleMeetingEnd(reason)
@@ -75,22 +75,18 @@ export class RecordingState extends BaseState {
             }
 
             // Stop the observer before transitioning to Cleanup state
-            console.info(
-                '🔄 Recording state loop ended, transitioning to cleanup state',
-            )
             return this.transition(MeetingStateType.Cleanup)
         } catch (error) {
-            console.error('❌ Error in recording state:', error)
-            console.error('❌ Error stack:', (error as Error).stack)
+            Logger.error('Error in recording state:', { error })
+            Logger.error('Error stack:', { stack: (error as Error).stack })
             return this.handleError(error as Error)
         }
     }
 
     private async initializeRecording(): Promise<void> {
-        console.info('Initializing recording...')
-
+        Logger.withFunctionName('initializeRecording')
         // Log the context state
-        console.info('Context state:', {
+        Logger.info('Context state:', {
             hasPathManager: !!this.context.pathManager,
             hasStreamingService: !!this.context.streamingService,
             isStreamingInstanceAvailable: !!Streaming.instance,
@@ -98,18 +94,18 @@ export class RecordingState extends BaseState {
 
         // Configure listeners
         await this.setupEventListeners()
-        console.info('Recording initialized successfully')
+        Logger.info('Recording initialized successfully')
     }
 
     private async setupEventListeners(): Promise<void> {
-        console.info('Setting up event listeners...')
+        Logger.withFunctionName('setupEventListeners')
 
         // Get recorder instance once to avoid repeated getInstance() calls
         const recorder = ScreenRecorderManager.getInstance()
 
         // Configure event listeners for screen recorder
         recorder.on('error', async (error) => {
-            console.error('ScreenRecorder error:', error)
+            Logger.error('ScreenRecorder error:', { error })
 
             // Handle different error shapes safely
             let errorMessage: string
@@ -146,12 +142,10 @@ export class RecordingState extends BaseState {
 
         // Handle audio warnings (non-critical audio issues) - just log them
         recorder.on('audioWarning', (warningInfo: AudioWarningEvent) => {
-            console.warn('ScreenRecorder audio warning:', warningInfo)
-            console.log(`⚠️ Audio quality warning: ${warningInfo.message}`)
+            Logger.warn('ScreenRecorder audio warning:', { warningInfo })
+            Logger.info(`Audio quality warning: ${warningInfo.message}`)
             // Non-fatal: keep recording
         })
-
-        console.info('Event listeners setup complete')
     }
 
     private async checkEndConditions(): Promise<{
@@ -186,9 +180,6 @@ export class RecordingState extends BaseState {
                 const currentSoundLevel =
                     Streaming.instance.getCurrentSoundLevel()
                 if (currentSoundLevel > SOUND_LEVEL_ACTIVITY_THRESHOLD) {
-                    console.log(
-                        `[checkEndConditions] Sound activity detected (${currentSoundLevel.toFixed(2)}), resetting all silence timers`,
-                    )
                     // Reset both silence timers when sound is detected
                     this.noAttendeesWithSilenceStartTime = 0
                     this.context.noSpeakerDetectedTime = 0
@@ -207,7 +198,8 @@ export class RecordingState extends BaseState {
 
             return { shouldEnd: false }
         } catch (error) {
-            console.error('Error checking end conditions:', error)
+            Logger.withFunctionName('checkEndConditions')
+            Logger.error('Error checking end conditions:', { error })
             return this.getBotRemovedReason()
         }
     }
@@ -225,12 +217,12 @@ export class RecordingState extends BaseState {
             const existingReason = GLOBAL.getEndReason()
             // Defensive null check: handle null, undefined, or any falsy values
             if (existingReason === null || existingReason === undefined) {
-                console.warn(
+                Logger.warn(
                     'GLOBAL.getEndReason() returned null/undefined despite hasError() being true, using default reason',
                 )
                 return { shouldEnd: true, reason: MeetingEndReason.BotRemoved }
             }
-            console.log(
+            Logger.info(
                 `Using existing error instead of BotRemoved: ${existingReason}`,
             )
             return { shouldEnd: true, reason: existingReason }
@@ -239,13 +231,14 @@ export class RecordingState extends BaseState {
         return { shouldEnd: true, reason: MeetingEndReason.BotRemoved }
     }
     private async handleMeetingEnd(reason: MeetingEndReason): Promise<void> {
-        console.info(`Handling meeting end with reason: ${reason}`)
+        Logger.withFunctionName('handleMeetingEnd')
+        Logger.info(`Handling meeting end with reason: ${reason}`)
         try {
             // Try to close the meeting but don't let an error here affect the rest
             try {
                 // If the reason is bot_removed, we know the meeting is already effectively closed
                 if (reason === MeetingEndReason.BotRemoved) {
-                    console.info(
+                    Logger.info(
                         'Bot was removed from meeting, skipping active closure step',
                     )
                 } else {
@@ -254,29 +247,28 @@ export class RecordingState extends BaseState {
                     )
                 }
             } catch (closeError) {
-                console.error(
+                Logger.warn(
                     'Error closing meeting, but continuing process:',
-                    closeError,
+                    { error: closeError },
                 )
             }
 
             // These critical steps must execute regardless of previous steps
-            console.info('Triggering call ended event')
             await Events.callEnded()
 
-            console.info('Setting isProcessing to false to end recording loop')
+            Logger.info('Setting isProcessing to false to end recording loop')
         } catch (error) {
-            console.error('Error during meeting end handling:', error)
+            Logger.error('Error during meeting end handling:', { error })
         } finally {
             // Always ensure this flag is set to stop the processing loop
             this.isProcessing = false
-            console.info('Meeting end handling completed')
         }
     }
 
     private async checkBotRemoved(): Promise<boolean> {
+        Logger.withFunctionName('checkBotRemoved')
         if (!this.context.playwrightPage) {
-            console.error('Playwright page not available')
+            Logger.error('Playwright page not available')
             return true
         }
 
@@ -285,7 +277,7 @@ export class RecordingState extends BaseState {
                 this.context.playwrightPage,
             )
         } catch (error) {
-            console.error('Error checking if bot was removed:', error)
+            Logger.error('Error checking if bot was removed:', { error })
             return false
         }
     }
@@ -296,6 +288,7 @@ export class RecordingState extends BaseState {
      * @returns true if the meeting should end due to lack of participants
      */
     private checkNoAttendees(now: number): boolean {
+        Logger.withFunctionName('checkNoAttendees')
         const attendeesCount = this.context.attendeesCount || 0
         const startTime = this.context.startTime || 0
         const firstUserJoined = this.context.firstUserJoined || false
@@ -320,9 +313,6 @@ export class RecordingState extends BaseState {
         // Start silence timer if not already started
         if (this.noAttendeesWithSilenceStartTime === 0) {
             this.noAttendeesWithSilenceStartTime = now
-            console.log(
-                '[checkNoAttendees] Starting silence confirmation timer',
-            )
             return false
         }
 
@@ -332,13 +322,10 @@ export class RecordingState extends BaseState {
 
         // Log progress if we're still waiting
         if (!hasEnoughSilence && silenceDuration % 5000 < this.CHECK_INTERVAL) {
-            console.log(
-                `[checkNoAttendees] Waiting for silence confirmation: ${Math.floor(silenceDuration / 1000)}s / ${this.SILENCE_CONFIRMATION_MS / 1000}s`,
-            )
         }
 
         if (hasEnoughSilence) {
-            console.log(
+            Logger.info(
                 `[checkNoAttendees] Silence confirmation reached (${Math.floor(silenceDuration / 1000)}s), ending meeting due to no attendees`,
             )
         }
@@ -352,6 +339,7 @@ export class RecordingState extends BaseState {
      * @returns true if the meeting should end due to absence of sound
      */
     private checkNoSpeaker(now: number): boolean {
+        Logger.withFunctionName('checkNoSpeaker')
         const noSpeakerDetectedTime = this.context.noSpeakerDetectedTime || 0
 
         // If no silence period has been detected, no need to end
@@ -365,14 +353,14 @@ export class RecordingState extends BaseState {
             noSpeakerDetectedTime + MEETING_CONSTANTS.SILENCE_TIMEOUT < now
 
         if (shouldEnd) {
-            console.log(
+            Logger.info(
                 `[checkNoSpeaker] No sound activity detected for ${silenceDuration} seconds, ending meeting`,
             )
         } else {
             // Log progress periodically
-            if (silenceDuration % 30000 < this.CHECK_INTERVAL) {
-                // Log every 30 seconds
-                console.log(
+            if (silenceDuration > 0 && silenceDuration % 60 === 0) {
+                // Log every minute
+                Logger.info(
                     `[checkNoSpeaker] No speaker detected for ${silenceDuration}s / ${MEETING_CONSTANTS.SILENCE_TIMEOUT / 1000}s`,
                 )
             }

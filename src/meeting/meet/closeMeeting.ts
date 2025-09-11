@@ -1,7 +1,8 @@
 import { Page } from '@playwright/test'
+import Logger from '../../utils/DatadogLogger'
 
 export async function closeMeeting(page: Page): Promise<void> {
-    console.log('Attempting to close meeting...')
+    Logger.withFunctionName('closeMeeting')
 
     // Add a timeout to ensure the function completes
     const closePromise = async () => {
@@ -69,9 +70,8 @@ export async function closeMeeting(page: Page): Promise<void> {
                 // Probablement déjà fermé, ignoré
             }
 
-            console.log('Meeting close sequence completed')
         } catch (error) {
-            console.error('Error during meeting closure:', error)
+            Logger.error('Error during meeting closure:', { error })
         }
     }
 
@@ -81,7 +81,7 @@ export async function closeMeeting(page: Page): Promise<void> {
             closePromise(),
             new Promise((_, reject) =>
                 setTimeout(() => {
-                    console.log(
+                    Logger.info(
                         'Meeting close timed out, but this is normal if the bot was removed',
                     )
                     reject(new Error('Meeting close timeout'))
@@ -90,6 +90,6 @@ export async function closeMeeting(page: Page): Promise<void> {
         ])
     } catch (error) {
         // Even timeout errors are expected and not critical
-        console.log('Meeting close did not complete normally, but continuing')
+        Logger.warn('Meeting close did not complete normally, but continuing')
     }
 }

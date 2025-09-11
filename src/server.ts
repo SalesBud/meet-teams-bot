@@ -11,6 +11,7 @@ import { StopRecordParams } from './types'
 import { GLOBAL } from './singleton'
 
 import axios from 'axios'
+import Logger from './utils/DatadogLogger'
 
 const HOST = '0.0.0.0'
 const PORT = 8080
@@ -70,14 +71,15 @@ export async function server() {
 
     // Leave bot request from api server
     app.post('/stop_record', async (req, res) => {
+        Logger.withFunctionName('stop_record_endpoint')
         const data: StopRecordParams = req.body
-        console.log('end meeting from api server :', data)
+        Logger.info('end meeting from api server :', { data })
 
         // Validate meeting URL with the one stored in Singleton
         try {
             const globalParams = GLOBAL.get()
             if (data.meeting_url !== globalParams.meeting_url) {
-                console.log('Meeting URL mismatch:', {
+                Logger.warn('Meeting URL mismatch:', {
                     requested: data.meeting_url,
                     stored: globalParams.meeting_url,
                 })
@@ -88,7 +90,7 @@ export async function server() {
                 })
             }
         } catch (error) {
-            console.log('No active meeting found in Singleton')
+            Logger.warn('No active meeting found in Singleton')
             return res.status(404).json({
                 error: 'No active meeting found',
                 details: 'No meeting parameters are currently set',
@@ -99,6 +101,7 @@ export async function server() {
     })
 
     async function stop_record(res: any, reason: MeetingEndReason) {
+        Logger.withFunctionName('stop_record')
         try {
             const meetingHandle = MeetingStateMachine.instance
 
@@ -116,7 +119,7 @@ export async function server() {
                 message: 'Meeting stopped successfully',
             })
         } catch (error) {
-            console.error('Failed to stop meeting:', error)
+            Logger.error('Failed to stop meeting:', { error })
             res.status(500).json({
                 error: 'Failed to stop meeting',
                 details: (error as Error).message,
@@ -126,7 +129,9 @@ export async function server() {
 
     // Get Recording Server Build Version Info
     app.get('/version', async (_req, res) => {
-        console.log(`version requested`)
+        Logger.withFunctionName('version_endpoint')
+        Logger.info(`version requested`)
+        // @ts-ignore-next-line
         await import('./buildInfo.json')
             .then((buildInfo) => {
                 res.status(200).json(buildInfo)
@@ -151,8 +156,9 @@ export async function server() {
 
     // Upload ressources into the server
     app.post('/upload', async (request, result) => {
+        Logger.withFunctionName('upload_endpoint')
         const params: Upload = request.body
-        console.log(params)
+        Logger.info('Upload request:', { params })
 
         const extension = path.extname(params.url)
         if (
@@ -169,7 +175,7 @@ export async function server() {
                 const filename = path.basename(params.url)
 
                 writeFile(filename, file.data)
-                console.log('Ressource downloaded @', filename)
+                Logger.info('Ressource downloaded @', { filename })
 
                 // In case of image, create a video from it with FFMPEG and delete tmp files
                 if (
@@ -179,9 +185,9 @@ export async function server() {
                     try {
                         const command = `ffmpeg -y -i ${filename} -vf scale=${VideoContext.WIDTH}:${VideoContext.HEIGHT} -y resized_${filename}`
                         const output = execSync(command)
-                        console.log(output.toString())
+                        Logger.info('FFmpeg scaling output:', { output: output.toString() })
                     } catch (e) {
-                        console.error(
+                        Logger.error(
                             `Unexpected error when scaling image : ${e}`,
                         )
                         result.status(400).json({
@@ -192,9 +198,9 @@ export async function server() {
                     try {
                         const command = `ffmpeg -y -loop 1 -i resized_${filename} -c:v libx264 -preset ultrafast -tune stillimage -r 30 -t 1 -pix_fmt yuv420p ${filename}.mp4`
                         const output = execSync(command)
-                        console.log(output.toString())
+                        Logger.info('FFmpeg video generation output:', { output: output.toString() })
                     } catch (e) {
-                        console.error(
+                        Logger.error(
                             `Unexpected error when generating video : ${e}`,
                         )
                         result.status(400).json({
@@ -206,7 +212,7 @@ export async function server() {
                         unlinkSync(`${filename}`)
                         unlinkSync(`resized_${filename}`)
                     } catch (e) {
-                        console.error(`Cannot unlink files : ${e}`)
+                        Logger.error(`Cannot unlink files : ${e}`)
                     }
                 }
                 result.status(200).json({
@@ -214,7 +220,7 @@ export async function server() {
                 })
             })
             .catch((e) => {
-                console.log(e)
+                Logger.error('Upload error:', { error: e })
                 result.status(400).json({
                     error: e,
                 })
@@ -223,8 +229,9 @@ export async function server() {
 
     // Play a given ressource into microphone, camera or both
     app.post('/play', async (request, result) => {
+        Logger.withFunctionName('play_endpoint')
         const params: Upload = request.body
-        console.log(params)
+        Logger.info('Play request:', { params })
 
         const extension = path.extname(params.url)
         if (
@@ -253,7 +260,7 @@ export async function server() {
                 SoundContext.instance.play(`${filename}`, false)
                 break
             default:
-                console.error('Unexpected Extension :', extension)
+                Logger.error('Unexpected Extension :', { extension })
                 result.status(400).json({
                     error: 'Unexpected Extension',
                 })
@@ -266,8 +273,8 @@ export async function server() {
 
     try {
         app.listen(PORT, HOST)
-        console.log(`Running on http://${HOST}:${PORT}`)
+        Logger.info(`Running on http://${HOST}:${PORT}`)
     } catch (e) {
-        console.error(`Failed to register instance: ${e}`)
+        Logger.error(`Failed to register instance: ${e}`)
     }
 }

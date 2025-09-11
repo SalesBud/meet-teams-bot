@@ -6,15 +6,17 @@ import { SpeakerManager } from '../../speaker-manager'
 import { MEETING_CONSTANTS } from '../constants'
 import { MeetingStateType, StateExecuteResult } from '../types'
 import { BaseState } from './base-state'
+import Logger from '../../utils/DatadogLogger'
 
 export class InCallState extends BaseState {
     async execute(): StateExecuteResult {
+        Logger.withFunctionName('execute')
         try {
             // Start with global timeout for setup
             await Promise.race([this.setupRecording(), this.createTimeout()])
             return this.transition(MeetingStateType.Recording)
         } catch (error) {
-            console.error('Setup recording failed:', error)
+            Logger.error('Setup recording failed:', { error })
             return this.handleError(error as Error)
         }
     }
@@ -32,8 +34,8 @@ export class InCallState extends BaseState {
     }
 
     private async setupRecording(): Promise<void> {
+        Logger.withFunctionName('setupRecording')
         try {
-            console.info('Starting recording setup sequence')
 
             // Notifier qu'on est en appel mais pas encore en enregistrement
             Events.inCallNotRecording()
@@ -43,38 +45,31 @@ export class InCallState extends BaseState {
 
             // Clean HTML and start observation
             await this.setupBrowserComponents()
-
-            console.info('Recording setup completed successfully')
         } catch (error) {
-            console.error('Failed during recording setup:', error)
+            Logger.error('Failed during recording setup:', { error })
             throw error
         }
     }
 
     private async initializeServices(): Promise<void> {
-        console.info('Initializing services')
-
         if (!this.context.pathManager) {
             throw new Error('PathManager not initialized')
         }
-        console.info('Services initialized successfully')
     }
 
     private async setupBrowserComponents(): Promise<void> {
+        Logger.withFunctionName('setupBrowserComponents')
         if (!this.context.playwrightPage) {
             throw new Error('Playwright page not initialized')
         }
 
         try {
-            console.log(
-                'Setting up browser components with integrated HTML cleanup...',
-            )
 
             // Start HTML cleanup first to clean the interface
             await this.startHtmlCleaning()
         } catch (error) {
-            console.error('Error in setupBrowserComponents:', error)
-            console.error('Context state:', {
+            Logger.error('Error in setupBrowserComponents:', { error })
+            Logger.error('Context state:', {
                 hasPlaywrightPage: !!this.context.playwrightPage,
                 recordingMode: GLOBAL.get().recording_mode,
                 meetingProvider: GLOBAL.get().meetingProvider,
@@ -88,7 +83,7 @@ export class InCallState extends BaseState {
         try {
             await this.startSpeakersObservation()
         } catch (error) {
-            console.error('Failed to start speakers observation:', error)
+            Logger.error('Failed to start speakers observation:', { error })
             // Continue even if speakers observation fails
         }
 
@@ -97,7 +92,8 @@ export class InCallState extends BaseState {
     }
 
     private async startSpeakersObservation(): Promise<void> {
-        console.log(
+        Logger.withFunctionName('startSpeakersObservation')
+        Logger.info(
             `Starting speakers observation for ${GLOBAL.get().meetingProvider}`,
         )
 
@@ -105,7 +101,7 @@ export class InCallState extends BaseState {
         SpeakerManager.start()
 
         if (!this.context.playwrightPage) {
-            console.error(
+            Logger.error(
                 'Playwright page not available for speakers observation',
             )
             return
@@ -121,7 +117,7 @@ export class InCallState extends BaseState {
             try {
                 await SpeakerManager.getInstance().handleSpeakerUpdate(speakers)
             } catch (error) {
-                console.error('Error handling speaker update:', error)
+                Logger.error('Error handling speaker update:', { error })
             }
         }
 
@@ -136,24 +132,23 @@ export class InCallState extends BaseState {
 
             // Store the observer in context for cleanup later
             this.context.speakersObserver = speakersObserver
-
-            console.log('Integrated speakers observer started successfully')
         } catch (error) {
-            console.error(
+            Logger.error(
                 'Failed to start integrated speakers observer:',
-                error,
+                { error },
             )
             throw error
         }
     }
 
     private async startHtmlCleaning(): Promise<void> {
+        Logger.withFunctionName('startHtmlCleaning')
         if (!this.context.playwrightPage) {
-            console.error('Playwright page not available for HTML cleanup')
+            Logger.error('Playwright page not available for HTML cleanup')
             return
         }
 
-        console.log(`Starting HTML cleanup for ${GLOBAL.get().meetingProvider}`)
+        Logger.info(`Starting HTML cleanup for ${GLOBAL.get().meetingProvider}`)
 
         try {
             // EXACT SAME LOGIC AS EXTENSION: Use centralized HtmlCleaner
@@ -167,10 +162,8 @@ export class InCallState extends BaseState {
 
             // Store for cleanup later
             this.context.htmlCleaner = htmlCleaner
-
-            console.log('HTML cleanup started successfully')
         } catch (error) {
-            console.error('Failed to start HTML cleanup:', error)
+            Logger.error('Failed to start HTML cleanup:', { error })
             // Continue even if HTML cleanup fails - it's not critical
         }
     }

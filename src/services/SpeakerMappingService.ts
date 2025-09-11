@@ -1,3 +1,5 @@
+import Logger from '../utils/DatadogLogger';
+
 export interface TranscriptSegment {
     speaker: string;
     start: number;
@@ -22,14 +24,13 @@ export interface OverlapScores {
 }
 
 export default class SpeakerMappingService {
-    private static logger = console;
-
     private static buildSpeakerMapping(
         transcriptSegments: TranscriptSegment[],
         allParticipants: string[] = [],
         detectedSpeakers: string[] = [],
         unifiedTalks?: UnifiedTalk[]
     ): SpeakerMapping {
+        Logger.withFunctionName('buildSpeakerMapping')
         let mapping: SpeakerMapping = {};
 
         if (unifiedTalks && unifiedTalks.length > 0) {
@@ -37,14 +38,13 @@ export default class SpeakerMappingService {
         }
 
         if (Object.keys(mapping).length === 0) {
-            this.logger.error(
+            Logger.warn(
                 'Unable to map speakers by overlap\n' +
                 `Detected speakers: ${JSON.stringify(detectedSpeakers)}\n` +
                 `Expected speakers: ${JSON.stringify(allParticipants)}\n` +
-                `Speakers from transcript: ${JSON.stringify(transcriptSegments)}\n` +
-                `Speakers from unified_talks: ${JSON.stringify(unifiedTalks)}`
+                `Speakers from transcript: ${JSON.stringify(transcriptSegments).slice(0, 100)}\n` +
+                `Speakers from unified_talks: ${JSON.stringify(unifiedTalks).slice(0, 100)}`
             );
-            return {};
         }
 
         return mapping;
@@ -72,7 +72,7 @@ export default class SpeakerMappingService {
             !transcriptSegments ||
             transcriptSegments.length === 0
         ) {
-            this.logger.warn('Insufficient data for overlap mapping');
+            Logger.warn('Insufficient data for overlap mapping');
             return {};
         }
 
@@ -80,11 +80,11 @@ export default class SpeakerMappingService {
             for (const talk of unifiedTalks) {
                 const requiredKeys = ['speaker', 'start', 'end'];
                 if (!requiredKeys.every(key => key in talk)) {
-                    this.logger.warn('Invalid structure in unified_talks');
+                    Logger.warn('Invalid structure in unified_talks');
                     return {};
                 }
                 if (typeof talk.start !== 'number' || typeof talk.end !== 'number') {
-                    this.logger.warn('Invalid time values in unified_talks');
+                    Logger.warn('Invalid time values in unified_talks');
                     return {};
                 }
             }
@@ -92,16 +92,16 @@ export default class SpeakerMappingService {
             for (const seg of transcriptSegments) {
                 const requiredKeys = ['speaker', 'start', 'end'];
                 if (!requiredKeys.every(key => key in seg)) {
-                    this.logger.warn('Invalid structure in transcript_segments');
+                    Logger.warn('Invalid structure in transcript_segments');
                     return {};
                 }
                 if (typeof seg.start !== 'number' || typeof seg.end !== 'number') {
-                    this.logger.warn('Invalid time values in transcript_segments');
+                    Logger.warn('Invalid time values in transcript_segments');
                     return {};
                 }
             }
         } catch (error) {
-            this.logger.error(`Error validating data: ${error}`);
+            Logger.error(`Error validating data: ${error}`);
             return {};
         }
 
@@ -109,7 +109,7 @@ export default class SpeakerMappingService {
         const anonSpeakers = [...new Set(transcriptSegments.map(seg => seg.speaker))].sort();
 
         if (realSpeakers.length === 0 || anonSpeakers.length === 0) {
-            this.logger.warn('No speakers found for mapping');
+            Logger.warn('No speakers found for mapping');
             return {};
         }
 
@@ -211,7 +211,7 @@ export default class SpeakerMappingService {
             }
         });
 
-        this.logger.info(`Speaker mapping completed: ${JSON.stringify(finalMapping)}`);
+        Logger.info(`Speaker mapping completed: ${JSON.stringify(finalMapping)}`);
         return finalMapping;
     }
 
@@ -224,7 +224,7 @@ export default class SpeakerMappingService {
         try {
 
             if (transcriptSegments.length === 0) {
-                this.logger.warn('No speaker segments in transcription.');
+                Logger.warn('No speaker segments in transcription.');
                 return transcriptSegments;
             }
 
@@ -240,10 +240,10 @@ export default class SpeakerMappingService {
                 speaker: mapping[utterance.speaker] || utterance.speaker
             }));
 
-            this.logger.info(`Speakers replaced successfully`);
+            Logger.info(`Speakers replaced successfully`);
             return updatedSegments;
         } catch (error) {
-            this.logger.error(`Error replacing speakers: ${error}`);
+            Logger.error(`Error replacing speakers: ${error}`);
             throw error;
         }
     }

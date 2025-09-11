@@ -6,6 +6,7 @@ import { RawData, Server, WebSocket } from 'ws'
 import { SoundContext } from './media_context'
 import { SpeakerData } from './types'
 import { PathManager } from './utils/PathManager'
+import Logger from './utils/DatadogLogger'
 
 const DEFAULT_SAMPLE_RATE: number = 24_000
 
@@ -69,15 +70,11 @@ export class Streaming {
      * No more Chrome Extension WebSocket server !
      */
     public start(): void {
+        Logger.withFunctionName('start')
         if (this.isInitialized) {
-            console.warn('Streaming service already started')
+            Logger.warn('Streaming service already started')
             return
         }
-
-        console.log(
-            '🎵 Starting simplified streaming service (direct audio processing)',
-        )
-
         // Setup external output WebSocket if configured
         if (this.outputUrl) {
             this.setupExternalOutputWS()
@@ -90,8 +87,6 @@ export class Streaming {
 
         this.isInitialized = true
         this.isPaused = false
-
-        console.log('✅ Streaming service ready for direct audio processing')
     }
 
     /**
@@ -109,10 +104,6 @@ export class Streaming {
         // Log stats periodically
         const now = Date.now()
         if (now - this.lastStatsLogTime >= this.STATS_LOG_INTERVAL_MS) {
-            const packetsInInterval = this.audioPacketsReceived
-            console.log(
-                `🎵 Direct audio packets processed: ${packetsInInterval} in last ${this.STATS_LOG_INTERVAL_MS}ms`,
-            )
             this.audioPacketsReceived = 0
             this.lastStatsLogTime = now
         }
@@ -127,7 +118,7 @@ export class Streaming {
         // Buffer audio for batch processing (sound level analysis)
         this.audioBuffer.push(audioData)
         if (this.audioBuffer.length >= this.AUDIO_BUFFER_SIZE) {
-            this.processBatchedAudio().catch(console.error)
+            this.processBatchedAudio().catch((error) => Logger.error('Error processing batched audio:', { error }))
             this.audioBuffer = []
         }
 
@@ -167,16 +158,16 @@ export class Streaming {
                             offset: 0.0,
                         }),
                     )
-                    console.log('✅ External output WebSocket connected')
+                    Logger.info('External output WebSocket connected')
                 }
             })
 
             this.output_ws.on('error', (err: Error) => {
-                console.error(`External output WebSocket error: ${err}`)
+                Logger.error(`External output WebSocket error: ${err}`)
             })
 
             this.output_ws.on('close', () => {
-                console.log('External output WebSocket closed')
+                Logger.info('External output WebSocket closed')
             })
 
             // Handle dual channel (input/output same URL)
@@ -184,7 +175,7 @@ export class Streaming {
                 this.play_incoming_audio_chunks(this.output_ws)
             }
         } catch (error) {
-            console.error(`Failed to setup external output WebSocket: ${error}`)
+            Logger.error(`Failed to setup external output WebSocket: ${error}`)
         }
     }
 
@@ -192,64 +183,68 @@ export class Streaming {
      * Setup external input WebSocket (for external services)
      */
     private setupExternalInputWS(): void {
+        Logger.withFunctionName('setupExternalInputWS')
         try {
             this.input_ws = new WebSocket(this.inputUrl!)
 
             this.input_ws.on('open', () => {
-                console.log('✅ External input WebSocket connected')
+                Logger.info('External input WebSocket connected')
             })
 
             this.input_ws.on('error', (err: Error) => {
-                console.error(`External input WebSocket error: ${err}`)
+                Logger.error(`External input WebSocket error: ${err}`)
             })
 
             this.play_incoming_audio_chunks(this.input_ws)
         } catch (error) {
-            console.error(`Failed to setup external input WebSocket: ${error}`)
+            Logger.error(`Failed to setup external input WebSocket: ${error}`)
         }
     }
 
     public pause(): void {
+        Logger.withFunctionName('pause')
         if (!this.isInitialized) {
-            console.warn('Cannot pause: streaming service not started')
+            Logger.warn('Cannot pause: streaming service not started')
             return
         }
 
         if (this.isPaused) {
-            console.warn('Streaming service already paused')
+            Logger.warn('Streaming service already paused')
             return
         }
 
         this.isPaused = true
-        console.log('🔇 Streaming paused')
+        Logger.info('Streaming paused')
     }
 
     public resume(): void {
+        Logger.withFunctionName('resume')
         if (!this.isInitialized) {
-            console.warn('Cannot resume: streaming service not started')
+            Logger.warn('Cannot resume: streaming service not started')
             return
         }
 
         if (!this.isPaused) {
-            console.warn('Streaming service not paused')
+            Logger.warn('Streaming service not paused')
             return
         }
 
         this.isPaused = false
         this.processPausedChunks()
-        console.log('🔊 Streaming resumed')
+        Logger.info('Streaming resumed')
     }
 
     /**
      * Simplified stop method - no more extension WebSocket cleanup
      */
     public stop(): void {
+        Logger.withFunctionName('stop')
         if (!this.isInitialized) {
-            console.warn('Cannot stop: streaming service not started')
+            Logger.warn('Cannot stop: streaming service not started')
             return
         }
 
-        console.log('🛑 Stopping simplified streaming service...')
+        Logger.info('Stopping simplified streaming service...')
 
         // Close external WebSockets only
         this.closeExternalWebSockets()
@@ -260,7 +255,7 @@ export class Streaming {
         this.pausedChunks = []
         Streaming.instance = null
 
-        console.log('✅ Streaming service stopped successfully')
+        Logger.info('Streaming service stopped successfully')
     }
 
     private closeExternalWebSockets(): void {
@@ -276,7 +271,7 @@ export class Streaming {
                 this.output_ws = null
             }
         } catch (error) {
-            console.error('Error closing external output WebSocket:', error)
+            Logger.error('Error closing external output WebSocket:', { error })
             this.output_ws = null
         }
 
@@ -292,7 +287,7 @@ export class Streaming {
                 this.input_ws = null
             }
         } catch (error) {
-            console.error('Error closing external input WebSocket:', error)
+            Logger.error('Error closing external input WebSocket:', { error })
             this.input_ws = null
         }
     }
@@ -391,7 +386,7 @@ export class Streaming {
             if (message instanceof Buffer) {
                 const uint8Array = new Uint8Array(message)
                 const f32Array = new Float32Array(uint8Array.buffer)
-                this.analyzeSoundLevel(f32Array).catch(console.error)
+                this.analyzeSoundLevel(f32Array).catch((error) => Logger.error('Error analyzing sound level:', { error }))
 
                 // Forward to external services if needed
                 if (
@@ -449,13 +444,13 @@ export class Streaming {
                         f32Array[i] = s16Array[i] / 32768
                     }
 
-                    this.analyzeSoundLevel(f32Array).catch(console.error)
+                    this.analyzeSoundLevel(f32Array).catch((error) => Logger.error('Error analyzing sound level:', { error }))
                     const buffer = Buffer.from(f32Array.buffer)
                     stream.push(buffer)
                 } catch (error) {
-                    console.error(
+                    Logger.error(
                         'Error processing external audio chunk:',
-                        error,
+                        { error },
                     )
                 }
             }

@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test'
 import { RecordingMode, SpeakerData } from '../../types'
 import { HtmlSnapshotService } from '../../services/html-snapshot-service'
+import Logger from '../../utils/DatadogLogger'
 
 export class TeamsSpeakersObserver {
     private page: Page
@@ -31,12 +32,10 @@ export class TeamsSpeakersObserver {
     }
 
     public async startObserving(): Promise<void> {
+        Logger.withFunctionName('startObserving')
         if (this.isObserving) {
-            console.warn('[Teams] Already observing')
             return
         }
-
-        console.log('[Teams] Starting speaker observation...')
 
         // Browser console logs are handled by centralized page-logger in base-state.ts
 
@@ -45,17 +44,16 @@ export class TeamsSpeakersObserver {
             'teamsSpekersChanged',
             async (speakers: SpeakerData[]) => {
                 try {
-                    console.log(
-                        `[Teams] 📞 CALLBACK RECEIVED: ${speakers.length} speakers from browser`,
-                    )
+                    if (process.env.NODE_ENV === 'local') {
+                        Logger.info(
+                            `[Teams] CALLBACK RECEIVED: ${speakers.length} speakers from browser`,
+                        )
+                    }
                     this.onSpeakersChange(speakers)
-                    console.log(
-                        `[Teams] ✅ onSpeakersChange callback completed`,
-                    )
                 } catch (error) {
-                    console.error(
-                        '[Teams] ❌ Error in speakers callback:',
-                        error,
+                    Logger.error(
+                        '[Teams] Error in speakers callback:',
+                        { error },
                     )
                 }
             },
@@ -636,7 +634,6 @@ export class TeamsSpeakersObserver {
         )
 
         this.isObserving = true
-        console.log('[Teams] ✅ Observer started successfully')
 
         // Capture DOM state after Speakers Observer is started
         const htmlSnapshot = HtmlSnapshotService.getInstance()
@@ -647,11 +644,11 @@ export class TeamsSpeakersObserver {
     }
 
     public stopObserving(): void {
+        Logger.withFunctionName('stopObserving')
         if (!this.isObserving) {
             return
         }
 
-        console.log('[Teams] Stopping observation...')
 
         this.page
             ?.evaluate(() => {
@@ -659,9 +656,8 @@ export class TeamsSpeakersObserver {
                     ;(window as any).teamsObserverCleanup()
                 }
             })
-            .catch((e) => console.error('[Teams] Error cleaning up:', e))
+            .catch((e) => Logger.error('[Teams] Error cleaning up:', { error: e }))
 
         this.isObserving = false
-        console.log('[Teams] ✅ Observer stopped')
     }
 }

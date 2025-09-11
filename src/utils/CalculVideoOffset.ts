@@ -6,6 +6,7 @@
 
 import { exec } from 'child_process'
 import { promisify } from 'util'
+import Logger from './DatadogLogger'
 
 const execAsync = promisify(exec)
 
@@ -34,9 +35,10 @@ export async function calculateVideoOffset(
     audioPath: string,
     videoPath: string,
 ): Promise<SyncOffset> {
-    console.log(`🔍 Analyzing sync signals (first ${ANALYSIS_WINDOW}s only)...`)
-    console.log(`   Audio: ${audioPath}`)
-    console.log(`   Video: ${videoPath}`)
+    Logger.withFunctionName('calculateVideoOffset')
+    Logger.info(`Analyzing sync signals (first ${ANALYSIS_WINDOW}s only)...`)
+    Logger.info(`   Audio: ${audioPath}`)
+    Logger.info(`   Video: ${videoPath}`)
 
     try {
         // Analyze both files in parallel
@@ -47,13 +49,13 @@ export async function calculateVideoOffset(
 
         // Validate that we found both signals
         if (audioTimestamp <= 0) {
-            console.warn(
-                `⚠️ Failed to detect audio beep in first ${ANALYSIS_WINDOW}s, using default`,
+            Logger.warn(
+                `Failed to detect audio beep in first ${ANALYSIS_WINDOW}s, using default`,
             )
         }
         if (videoTimestamp <= 0) {
-            console.warn(
-                `⚠️ Failed to detect video flash in first ${ANALYSIS_WINDOW}s, using default`,
+            Logger.warn(
+                `Failed to detect video flash in first ${ANALYSIS_WINDOW}s, using default`,
             )
         }
 
@@ -66,7 +68,7 @@ export async function calculateVideoOffset(
                 confidence: 0.1,
             }
 
-            console.log(`✅ Using default offset: 0.000s (confidence: 10.0%)`)
+            Logger.info(`Using default offset: 0.000s (confidence: 10.0%)`)
             return defaultResult
         }
 
@@ -80,16 +82,16 @@ export async function calculateVideoOffset(
             confidence,
         }
 
-        console.log(`✅ Sync analysis complete:`)
-        console.log(`   Audio beep at: ${audioTimestamp.toFixed(3)}s`)
-        console.log(`   Video flash at: ${videoTimestamp.toFixed(3)}s`)
-        console.log(`   Offset: ${offsetSeconds.toFixed(3)}s`)
-        console.log(`   Confidence: ${(confidence * 100).toFixed(1)}%`)
+        Logger.info(`Sync analysis complete:`)
+        Logger.info(`   Audio beep at: ${audioTimestamp.toFixed(3)}s`)
+        Logger.info(`   Video flash at: ${videoTimestamp.toFixed(3)}s`)
+        Logger.info(`   Offset: ${offsetSeconds.toFixed(3)}s`)
+        Logger.info(`   Confidence: ${(confidence * 100).toFixed(1)}%`)
 
         return result
     } catch (error) {
-        console.error('❌ Failed to calculate offset:', error)
-        console.log('⚠️ Using fallback offset due to analysis error')
+        Logger.error('Failed to calculate offset:', { error })
+        Logger.info('Using fallback offset due to analysis error')
 
         // Return default offset with very low confidence
         const fallbackResult: SyncOffset = {
@@ -99,7 +101,7 @@ export async function calculateVideoOffset(
             confidence: 0.05, // Very low confidence for error case
         }
 
-        console.log(`✅ Using fallback offset: 0.000s (confidence: 5.0%)`)
+        Logger.info(`Using fallback offset: 0.000s (confidence: 5.0%)`)
         return fallbackResult
     }
 }
@@ -108,8 +110,9 @@ export async function calculateVideoOffset(
  * Detect 1000Hz beep in audio file using FFmpeg spectral analysis
  */
 async function detectAudioBeep(audioPath: string): Promise<number> {
-    console.log(
-        `🔊 Detecting ${EXPECTED_FREQUENCY}Hz beep in first ${ANALYSIS_WINDOW}s of audio...`,
+    Logger.withFunctionName('detectAudioBeep')
+    Logger.info(
+        `Detecting ${EXPECTED_FREQUENCY}Hz beep in first ${ANALYSIS_WINDOW}s of audio...`,
     )
 
     try {
@@ -122,7 +125,7 @@ async function detectAudioBeep(audioPath: string): Promise<number> {
                 .split('\n')
                 .filter((line) => line.includes('silence_'))
 
-            console.log(
+            Logger.info(
                 `   Silence detection found ${lines.length} events in first ${ANALYSIS_WINDOW}s`,
             )
 
@@ -133,7 +136,7 @@ async function detectAudioBeep(audioPath: string): Promise<number> {
                     const time = parseFloat(endMatch[1])
                     if (time > 0.01 && time < ANALYSIS_WINDOW) {
                         // Avoid very early noise
-                        console.log(
+                        Logger.info(
                             `   Found audio activity (likely bip) at ${time.toFixed(3)}s`,
                         )
                         return time
@@ -141,7 +144,7 @@ async function detectAudioBeep(audioPath: string): Promise<number> {
                 }
             }
         } catch (e) {
-            console.log(
+            Logger.info(
                 `   Silence detection failed: ${e instanceof Error ? e.message : 'Unknown error'}`,
             )
         }
@@ -153,7 +156,7 @@ async function detectAudioBeep(audioPath: string): Promise<number> {
         const maxVolumeMatch = volumeOutput.match(/max_volume: (-?[0-9.]+) dB/)
         if (maxVolumeMatch) {
             const maxVolume = parseFloat(maxVolumeMatch[1])
-            console.log(
+            Logger.info(
                 `   Audio levels in first ${ANALYSIS_WINDOW}s: max=${maxVolume.toFixed(1)}dB`,
             )
 
@@ -173,7 +176,7 @@ async function detectAudioBeep(audioPath: string): Promise<number> {
                         if (match) {
                             const time = parseFloat(match[1])
                             if (time > 0.01 && time < ANALYSIS_WINDOW) {
-                                console.log(
+                                Logger.info(
                                     `   Found audio activity with detailed analysis at ${time.toFixed(3)}s`,
                                 )
                                 return time
@@ -181,17 +184,15 @@ async function detectAudioBeep(audioPath: string): Promise<number> {
                         }
                     }
                 } catch (e) {
-                    console.log(
+                    Logger.warn(
                         `   Detailed analysis failed: ${e instanceof Error ? e.message : 'Unknown error'}`,
                     )
                 }
             }
         }
-
-        console.log(`   No sync bip detected in first ${ANALYSIS_WINDOW}s`)
         return 0
     } catch (error) {
-        console.warn(`⚠️ Audio analysis failed: ${error}`)
+        Logger.warn(`Audio analysis failed: ${error}`)
         return 0
     }
 }
@@ -201,9 +202,7 @@ async function detectAudioBeep(audioPath: string): Promise<number> {
  * Much more reliable than scene detection for the specific green flash
  */
 async function detectVideoFlash(videoPath: string): Promise<number> {
-    console.log(
-        `💚 Detecting green flash using color analysis (first ${ANALYSIS_WINDOW}s)...`,
-    )
+    Logger.withFunctionName('detectVideoFlash')
 
     try {
         // Use scene detection but filter by color characteristics
@@ -245,10 +244,10 @@ async function detectVideoFlash(videoPath: string): Promise<number> {
                             currentTime > 1.0 &&
                             currentTime < ANALYSIS_WINDOW
                         ) {
-                            console.log(
+                            Logger.info(
                                 `   Found green flash at ${currentTime.toFixed(3)}s (color analysis)`,
                             )
-                            console.log(
+                            Logger.info(
                                 `   YUV values: [${Y.toFixed(1)} ${U.toFixed(1)} ${V.toFixed(1)}]`,
                             )
                             return currentTime
@@ -257,7 +256,7 @@ async function detectVideoFlash(videoPath: string): Promise<number> {
                 }
             }
         } catch (e) {
-            console.log(
+            Logger.warn(
                 `   Color analysis failed: ${e instanceof Error ? e.message : 'Unknown error'}`,
             )
         }
@@ -271,7 +270,7 @@ async function detectVideoFlash(videoPath: string): Promise<number> {
                 .split('\n')
                 .filter((line) => line.includes('pts_time'))
 
-            console.log(
+            Logger.info(
                 `   Fallback: Found ${lines.length} scene changes in first ${ANALYSIS_WINDOW}s`,
             )
 
@@ -299,21 +298,19 @@ async function detectVideoFlash(videoPath: string): Promise<number> {
             }
 
             if (bestFlashTime > 0) {
-                console.log(
+                Logger.info(
                     `   Fallback: Found scene change at ${bestFlashTime.toFixed(3)}s (scene value: ${bestSceneValue.toFixed(3)})`,
                 )
                 return bestFlashTime
             }
         } catch (e) {
-            console.log(
+            Logger.info(
                 `   Fallback scene detection failed: ${e instanceof Error ? e.message : 'Unknown error'}`,
             )
         }
-
-        console.log(`   No green flash detected in first ${ANALYSIS_WINDOW}s`)
         return 0
     } catch (error) {
-        console.warn(`⚠️ Video analysis failed: ${error}`)
+        Logger.warn(`Video analysis failed: ${error}`)
         return 0
     }
 }
@@ -335,11 +332,12 @@ async function testWithSampleFiles(): Promise<SyncOffset> {
  * Uses color-based detection instead of scene detection
  */
 async function testGreenFlashDetection(): Promise<SyncOffset> {
+    Logger.withFunctionName('testGreenFlashDetection')
     const videoPath =
         '/Users/philippedrion/Documents/meeting-baas/meeting_bot/recording_server/recordings/47FED07F-401A-4E78-A810-044F4CE469BA/temp/raw.mp4'
 
-    console.log('🧪 Testing green flash detection on specific video file...')
-    console.log(`   Video: ${videoPath}`)
+    Logger.info('Testing green flash detection on specific video file...')
+    Logger.info(`   Video: ${videoPath}`)
 
     try {
         // Use color-based detection instead of scene detection
@@ -352,13 +350,13 @@ async function testGreenFlashDetection(): Promise<SyncOffset> {
             confidence: videoTimestamp > 0 ? 0.95 : 0.1,
         }
 
-        console.log(`✅ Green flash detection result:`)
-        console.log(`   Video flash at: ${videoTimestamp.toFixed(3)}s`)
-        console.log(`   Confidence: ${(result.confidence * 100).toFixed(1)}%`)
+        Logger.info(`Green flash detection result:`)
+        Logger.info(`   Video flash at: ${videoTimestamp.toFixed(3)}s`)
+        Logger.info(`   Confidence: ${(result.confidence * 100).toFixed(1)}%`)
 
         return result
     } catch (error) {
-        console.error('❌ Green flash detection failed:', error)
+        Logger.error('Green flash detection failed:', { error })
         return {
             audioTimestamp: 0,
             videoTimestamp: 0,
@@ -373,8 +371,9 @@ async function testGreenFlashDetection(): Promise<SyncOffset> {
  * Looks for frames with specific YUV color characteristics of the green flash
  */
 async function detectGreenFlashByColor(videoPath: string): Promise<number> {
-    console.log(
-        `💚 Detecting green flash using color analysis (first ${ANALYSIS_WINDOW}s)...`,
+    Logger.withFunctionName('detectGreenFlashByColor')
+    Logger.info(
+        `Detecting green flash using color analysis (first ${ANALYSIS_WINDOW}s)...`,
     )
 
     try {
@@ -388,7 +387,7 @@ async function detectGreenFlashByColor(videoPath: string): Promise<number> {
                 .split('\n')
                 .filter((line) => line.includes('pts_time'))
 
-            console.log(`   Found ${lines.length} potential green flash frames`)
+            Logger.info(`   Found ${lines.length} potential green flash frames`)
 
             // Look for the first significant green flash after 1s
             for (const line of lines) {
@@ -396,16 +395,16 @@ async function detectGreenFlashByColor(videoPath: string): Promise<number> {
                 if (match) {
                     const time = parseFloat(match[1])
                     if (time > 1.0 && time < ANALYSIS_WINDOW) {
-                        console.log(
-                            `   Found green flash at ${time.toFixed(3)}s (color-based detection)`,
+                        Logger.info(
+                            `Found green flash at ${time.toFixed(3)}s (color-based detection)`,
                         )
                         return time
                     }
                 }
             }
         } catch (e) {
-            console.log(
-                `   Color detection failed: ${e instanceof Error ? e.message : 'Unknown error'}`,
+            Logger.warn(
+                `Color detection failed: ${e instanceof Error ? e.message : 'Unknown error'}`,
             )
         }
 
@@ -448,11 +447,11 @@ async function detectGreenFlashByColor(videoPath: string): Promise<number> {
                             currentTime > 1.0 &&
                             currentTime < ANALYSIS_WINDOW
                         ) {
-                            console.log(
-                                `   Found green flash at ${currentTime.toFixed(3)}s (scene+color analysis)`,
+                            Logger.info(
+                                `Found green flash at ${currentTime.toFixed(3)}s (scene+color analysis)`,
                             )
-                            console.log(
-                                `   YUV values: [${Y.toFixed(1)} ${U.toFixed(1)} ${V.toFixed(1)}]`,
+                            Logger.info(
+                                `YUV values: [${Y.toFixed(1)} ${U.toFixed(1)} ${V.toFixed(1)}]`,
                             )
                             return currentTime
                         }
@@ -460,15 +459,13 @@ async function detectGreenFlashByColor(videoPath: string): Promise<number> {
                 }
             }
         } catch (e) {
-            console.log(
-                `   Scene+color analysis failed: ${e instanceof Error ? e.message : 'Unknown error'}`,
+            Logger.warn(
+                `Scene+color analysis failed: ${e instanceof Error ? e.message : 'Unknown error'}`,
             )
         }
-
-        console.log(`   No green flash detected in first ${ANALYSIS_WINDOW}s`)
         return 0
     } catch (error) {
-        console.warn(`⚠️ Green flash color analysis failed: ${error}`)
+        Logger.warn(`Green flash color analysis failed: ${error}`)
         return 0
     }
 }

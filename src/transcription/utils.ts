@@ -1,10 +1,13 @@
 import { SpeakerLog, SpeakerCount } from '../types/Transcript';
 import { UnifiedTalk } from '../services/SpeakerMappingService';
+import Logger from '../utils/DatadogLogger';
 
 export function countUniqueSpeakers(speakersLog: SpeakerLog[]): SpeakerCount {
+    Logger.withFunctionName('countUniqueSpeakers')
     try {
         const isOnlyOneSpeaker = new Set(speakersLog.map(speaker => speaker.name)).size === 1
         if (isOnlyOneSpeaker) {
+            Logger.info('Only one speaker detected, returning 1 speaker expected', { speaker: speakersLog[0].name })
             return { minSpeakersExpected: 1, maxSpeakersExpected: 1, speakers: [speakersLog[0].name] }
         }
 
@@ -48,7 +51,7 @@ export function countUniqueSpeakers(speakersLog: SpeakerLog[]): SpeakerCount {
             speakers: Array.from(allSpeakers)
         };
     } catch (error) {
-        console.error('Error counting unique speakers', { error });
+        Logger.warn('Error counting unique speakers', { error });
         return {
             minSpeakersExpected: 0,
             maxSpeakersExpected: 0,
@@ -58,6 +61,7 @@ export function countUniqueSpeakers(speakersLog: SpeakerLog[]): SpeakerCount {
 }
 
 export function extractSpeechSegments(speakersLog: SpeakerLog[], minDurationMs = 500): UnifiedTalk[] {
+    Logger.withFunctionName('extractSpeechSegments')
     try {
         const segments: UnifiedTalk[] = [];
 
@@ -115,11 +119,11 @@ export function extractSpeechSegments(speakersLog: SpeakerLog[], minDurationMs =
 
         segments.sort((a, b) => a.start - b.start);
 
-        console.info(`Extracted ${segments.length} speech segments`);
+        Logger.info(`Extracted ${segments.length} speech segments from speakers log`);
 
         return segments;
     } catch (error) {
-        console.warn('Error extracting speech segments: ', { error });
+        Logger.warn('Error extracting speech segments: ', { error });
         return [];
     }
 }
