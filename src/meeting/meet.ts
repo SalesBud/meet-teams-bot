@@ -210,7 +210,10 @@ export class MeetProvider implements MeetingProviderInterface {
             // WITHOUT checking cancelCheck since we are already in the meeting
 
             // Capture DOM state after successfully joining meeting
-            await htmlSnapshot.captureSnapshot(page, 'meet_join_meeting_success')
+            await htmlSnapshot.captureSnapshot(
+                page,
+                'meet_join_meeting_success',
+            )
 
             if (GLOBAL.get().enter_message) {
                 Logger.info('Sending entry message...')
@@ -222,7 +225,10 @@ export class MeetProvider implements MeetingProviderInterface {
             const maxAttempts = 3
             if (GLOBAL.get().recording_mode !== 'audio_only') {
                 // Capture DOM state before layout change attempts
-                await htmlSnapshot.captureSnapshot(page, 'meet_layout_change_before_attempts')
+                await htmlSnapshot.captureSnapshot(
+                    page,
+                    'meet_layout_change_before_attempts',
+                )
 
                 for (let attempt = 1; attempt <= maxAttempts; attempt++) {
                     if (await changeLayout(page, attempt)) {
@@ -468,17 +474,15 @@ async function notAcceptedInMeeting(page: Page): Promise<boolean> {
         "You've been removed",
         'we encountered a problem joining',
         "You can't join",
-        "You left the meeting" // Happens if the bot first entered in the waiting room of the meeting (not the entry page) and then it was denied entry
+        'You left the meeting', // Happens if the bot first entered in the waiting room of the meeting (not the entry page) and then it was denied entry
     ]
 
     // Google Meet itself has denied entry
-    const googleMeetDeniedTexts = [
-        "You can't join this video call"
-    ]
+    const googleMeetDeniedTexts = ["You can't join this video call"]
 
     // Google Meet has its own timeout which would deny entry into the meeting after ~10 minutes
     const timeoutTextsFromGoogle = [
-        "No one responded to your request to join the call"
+        'No one responded to your request to join the call',
     ]
 
     // Check for Google Meet denied texts first since the message overlaps with the user denied entry message
@@ -486,8 +490,13 @@ async function notAcceptedInMeeting(page: Page): Promise<boolean> {
         const element = page.locator(`text=${text}`)
         if ((await element.count()) > 0) {
             // Google Meet itself has denied entry
-            console.log('XXXXXXXXXXXXXXXXXX Google Meet itself has denied entry')
-            GLOBAL.setError(MeetingEndReason.BotNotAccepted, "Google Meet has denied entry")
+            console.log(
+                'XXXXXXXXXXXXXXXXXX Google Meet itself has denied entry',
+            )
+            GLOBAL.setError(
+                MeetingEndReason.BotNotAccepted,
+                'Google Meet has denied entry',
+            )
             return true
         }
     }
@@ -498,7 +507,10 @@ async function notAcceptedInMeeting(page: Page): Promise<boolean> {
         if ((await element.count()) > 0) {
             // Google Meet itself has timed out
             console.log('XXXXXXXXXXXXXXXXXX Google Meet itself has timed out')
-            GLOBAL.setError(MeetingEndReason.TimeoutWaitingToStart, "Google Meet has timed out while waiting for the bot to join the meeting")
+            GLOBAL.setError(
+                MeetingEndReason.TimeoutWaitingToStart,
+                'Google Meet has timed out while waiting for the bot to join the meeting',
+            )
             return true
         }
     }
@@ -627,7 +639,10 @@ async function changeLayout(
         // Capture DOM state before layout change operation (first attempt only)
         const htmlSnapshot = HtmlSnapshotService.getInstance()
         if (currentAttempt === 1) {
-            await htmlSnapshot.captureSnapshot(page, 'meet_layout_change_operation_start_attempt_1')
+            await htmlSnapshot.captureSnapshot(
+                page,
+                'meet_layout_change_operation_start_attempt_1',
+            )
         }
 
         // First check if we are still in the meeting

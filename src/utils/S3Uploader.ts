@@ -100,7 +100,9 @@ export class S3Uploader {
 
         try {
             // Get list of files in local directory (flat structure, no recursion needed)
-            const items = await fs.promises.readdir(localDir, { withFileTypes: true })
+            const items = await fs.promises.readdir(localDir, {
+                withFileTypes: true,
+            })
             const files = items
                 .filter(item => item.isFile())
                 .map(item => path.join(localDir, item.name))
@@ -132,13 +134,19 @@ export class S3Uploader {
                         return { success: true, file: filename }
                     } catch (error: any) {
                         // Error is already logged in uploadFile
-                        return { success: false, file: filename, error: error.message }
+                        return {
+                            success: false,
+                            file: filename,
+                            error: error.message,
+                        }
                     }
                 })
 
                 // Wait for batch to complete before starting next batch
                 const batchResults = await Promise.all(batchPromises)
-                const batchSuccesses = batchResults.filter(r => r.success).length
+                const batchSuccesses = batchResults.filter(
+                    (r) => r.success,
+                ).length
                 const batchFailures = batchResults.length - batchSuccesses
 
                 Logger.info(`Batch ${batchNumber} complete: ${batchSuccesses} successful, ${batchFailures} failed`)
@@ -161,13 +169,8 @@ export class S3Uploader {
             throw error
         }
     }
-
-
 }
 
 // Export utility functions that use the singleton instance
-export const s3cp = (
-    local: string,
-    s3path: string,
-): Promise<void> =>
+export const s3cp = (local: string, s3path: string): Promise<void> =>
     S3Uploader.getInstance().uploadToDefaultBucket(local, s3path)
