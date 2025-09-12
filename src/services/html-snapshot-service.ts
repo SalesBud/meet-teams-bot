@@ -44,7 +44,7 @@ export class HtmlSnapshotService {
                 resolve({ success: false })
             }, SNAPSHOT_TIMEOUT)
         })
-        
+
         // Race the promises and clear timeout when done
         const result = await Promise.race([snapshotPromise, timeoutPromise])
         clearTimeout(timeoutId) // Cancel timeout regardless of which promise won
@@ -56,23 +56,25 @@ export class HtmlSnapshotService {
      */
     private async performSnapshot(
         page: Page,
-        context: string
+        context: string,
     ): Promise<HtmlSnapshotResult> {
         Logger.withFunctionName('performSnapshot')
         // Check if page is still valid
         if (page.isClosed()) {
             Logger.warn('[HtmlSnapshot] Cannot capture snapshot: page is closed')
             return {
-                success: false
+                success: false,
             }
         }
 
         // Additional page state checks
         try {
             await page.waitForFunction(
-                () => document.readyState === 'complete' || document.readyState === 'interactive',
+                () =>
+                    document.readyState === 'complete' ||
+                    document.readyState === 'interactive',
                 undefined,
-                { timeout: 1000 }
+                { timeout: 1000 },
             )
         } catch (evalError) {
             Logger.warn(`[HtmlSnapshot] Page not responsive for ${context}, skipping snapshot`)
@@ -81,23 +83,25 @@ export class HtmlSnapshotService {
 
         // Capture HTML content
         const html = await page.content()
-        
+
         // Generate filename
         const filename = this.generateFilename(context)
-        const filePath = path.join(this.pathManager.getHtmlSnapshotsPath(), filename)
-        
+        const filePath = path.join(
+            this.pathManager.getHtmlSnapshotsPath(),
+            filename,
+        )
+
         // Ensure directory exists
         await fs.mkdir(path.dirname(filePath), { recursive: true })
-        
+
         // Save HTML file
         await fs.writeFile(filePath, html, 'utf-8')
         
         return {
-            success: true
+            success: true,
         }
     }
 
-    
     /**
      * Generate filename for snapshot
      */
@@ -106,5 +110,4 @@ export class HtmlSnapshotService {
         const safeContext = context.replace(/[^\w.-]+/g, '_').slice(0, 100)
         return `${timestamp}_${safeContext}.html`
     }
-
 }

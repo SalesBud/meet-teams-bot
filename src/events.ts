@@ -114,7 +114,7 @@ export class Events {
         additionalData: Record<string, any> = {},
         event: string = 'bot.status_change',
     ): Promise<void> {
-        Logger.withFunctionName('sendOnce')
+        Logger.withFunctionName('[Events] sendOnce')
         if (this.sentEvents.has(code)) {
             Logger.warn(`Event ${code} already sent, skipping...`)
             return
@@ -130,7 +130,7 @@ export class Events {
         additionalData: Record<string, any> = {},
         event: string = 'bot.status_change',
     ): Promise<void> {
-        Logger.withFunctionName('send')
+        Logger.withFunctionName('[Events] send')
         try {
             await axios({
                 method: 'POST',

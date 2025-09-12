@@ -186,7 +186,7 @@ export default class TranscriptionProcess {
         videoUrl: string,
         transcript: any,
     ): Record<string, any> {
-        if (mappedUtterances.length > 0) {
+        if (mappedUtterances?.length > 0) {
             const mappedTranscript = mappedUtterances.map(
                 (transcript: any) => ({
                     speaker: transcript.speaker,

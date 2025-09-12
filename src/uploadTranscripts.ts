@@ -52,7 +52,6 @@ export async function uploadTranscriptTask(
 async function upload(speaker: SpeakerData, end: boolean) {
     Logger.withFunctionName('upload')
     if (!process.env.API_SERVER_BASEURL) {
-        Logger.info('Skipping transcript upload - no API server baseurl')
         return
     }
     if (TRANSCIBER_STOPED) {
