@@ -645,7 +645,7 @@ export class ScreenRecorder extends EventEmitter {
                 await S3Uploader.getInstance().uploadFile(
                     this.audioOutputPath,
                     GLOBAL.get().remote?.aws_s3_video_bucket!,
-                    `${process.env.BOT_ID}/${identifier}.wav`
+                    `${GLOBAL.get().bot_uuid}/${identifier}.wav`
                 )
                 fs.unlinkSync(this.audioOutputPath)
             }
@@ -662,7 +662,7 @@ export class ScreenRecorder extends EventEmitter {
                 await S3Uploader.getInstance().uploadFile(
                     this.outputPath,
                     GLOBAL.get().remote?.aws_s3_video_bucket!,
-                    `${process.env.BOT_ID}/${identifier}.mp4`
+                    `${GLOBAL.get().bot_uuid}/${identifier}.mp4`
                 )
                 fs.unlinkSync(this.outputPath)
             }
