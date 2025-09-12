@@ -2,7 +2,6 @@ import { Page } from '@playwright/test'
 import { HtmlSnapshotService } from '../../services/html-snapshot-service'
 import Logger from '../../utils/DatadogLogger'
 import { RecordingMode } from '../../types'
-import Logger from '../../utils/DatadogLogger'
 
 export class MeetHtmlCleaner {
     private page: Page
