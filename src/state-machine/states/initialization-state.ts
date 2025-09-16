@@ -75,7 +75,7 @@ export class InitializationState extends BaseState {
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                Logger.info(`Browser setup attempt ${attempt}/${maxRetries}`)
+                Logger.debug(`Browser setup attempt ${attempt}/${maxRetries}`)
 
                 // Définir le type de retour attendu de openBrowser
                 type BrowserResult = {

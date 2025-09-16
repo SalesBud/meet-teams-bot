@@ -36,9 +36,9 @@ export async function calculateVideoOffset(
     videoPath: string,
 ): Promise<SyncOffset> {
     Logger.withFunctionName('calculateVideoOffset')
-    Logger.info(`Analyzing sync signals (first ${ANALYSIS_WINDOW}s only)...`)
-    Logger.info(`   Audio: ${audioPath}`)
-    Logger.info(`   Video: ${videoPath}`)
+    Logger.debug(`Analyzing sync signals (first ${ANALYSIS_WINDOW}s only)...`)
+    Logger.debug(`   Audio: ${audioPath}`)
+    Logger.debug(`   Video: ${videoPath}`)
 
     try {
         // Analyze both files in parallel
@@ -82,11 +82,11 @@ export async function calculateVideoOffset(
             confidence,
         }
 
-        Logger.info(`Sync analysis complete:`)
-        Logger.info(`   Audio beep at: ${audioTimestamp.toFixed(3)}s`)
-        Logger.info(`   Video flash at: ${videoTimestamp.toFixed(3)}s`)
-        Logger.info(`   Offset: ${offsetSeconds.toFixed(3)}s`)
-        Logger.info(`   Confidence: ${(confidence * 100).toFixed(1)}%`)
+        Logger.debug(`Sync analysis complete:`)
+        Logger.debug(`   Audio beep at: ${audioTimestamp.toFixed(3)}s`)
+        Logger.debug(`   Video flash at: ${videoTimestamp.toFixed(3)}s`)
+        Logger.debug(`   Offset: ${offsetSeconds.toFixed(3)}s`)
+        Logger.debug(`   Confidence: ${(confidence * 100).toFixed(1)}%`)
 
         return result
     } catch (error) {
@@ -111,7 +111,7 @@ export async function calculateVideoOffset(
  */
 async function detectAudioBeep(audioPath: string): Promise<number> {
     Logger.withFunctionName('detectAudioBeep')
-    Logger.info(
+    Logger.debug(
         `Detecting ${EXPECTED_FREQUENCY}Hz beep in first ${ANALYSIS_WINDOW}s of audio...`,
     )
 
@@ -125,7 +125,7 @@ async function detectAudioBeep(audioPath: string): Promise<number> {
                 .split('\n')
                 .filter((line) => line.includes('silence_'))
 
-            Logger.info(
+            Logger.debug(
                 `   Silence detection found ${lines.length} events in first ${ANALYSIS_WINDOW}s`,
             )
 
@@ -136,7 +136,7 @@ async function detectAudioBeep(audioPath: string): Promise<number> {
                     const time = parseFloat(endMatch[1])
                     if (time > 0.01 && time < ANALYSIS_WINDOW) {
                         // Avoid very early noise
-                        Logger.info(
+                        Logger.debug(
                             `   Found audio activity (likely bip) at ${time.toFixed(3)}s`,
                         )
                         return time
@@ -144,7 +144,7 @@ async function detectAudioBeep(audioPath: string): Promise<number> {
                 }
             }
         } catch (e) {
-            Logger.info(
+            Logger.warn(
                 `   Silence detection failed: ${e instanceof Error ? e.message : 'Unknown error'}`,
             )
         }

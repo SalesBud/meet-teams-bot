@@ -71,7 +71,7 @@ export class MeetProvider implements MeetingProviderInterface {
             await clickDismiss(page)
             await sleep(300)
 
-            Logger.info(
+            Logger.debug(
                 'useWithoutAccountClicked:',
                 {
                     result: await clickWithInnerText(
@@ -85,7 +85,7 @@ export class MeetProvider implements MeetingProviderInterface {
 
             for (let attempt = 1; attempt <= 5; attempt++) {
                 if (await typeBotName(page, GLOBAL.get().bot_name)) {
-                    Logger.info('Bot name typed at attempt', { attempt })
+                    Logger.debug('Bot name typed at attempt', { attempt })
                     break
                 }
                 await clickOutsideModal(page)
@@ -105,7 +105,7 @@ export class MeetProvider implements MeetingProviderInterface {
 
             // Alternating between span and button selectors for 5 iterations total
             for (let attempt = 1; attempt <= joinButtonMaxAttempts; attempt++) {
-                Logger.info(
+                Logger.debug(
                     `Join button search attempt ${attempt}/${joinButtonMaxAttempts}`,
                 )
 
@@ -118,7 +118,7 @@ export class MeetProvider implements MeetingProviderInterface {
                         1, // Only try once per iteration
                     )
                     if (askToJoinClicked) {
-                        Logger.info(
+                        Logger.debug(
                             `Found join button in span element on attempt ${attempt}`,
                         )
                         break
@@ -140,7 +140,7 @@ export class MeetProvider implements MeetingProviderInterface {
                         1, // Only try once per iteration
                     )
                     if (askToJoinClicked) {
-                        Logger.info(
+                        Logger.debug(
                             `Found join button in button element on attempt ${attempt}`,
                         )
                         break
@@ -154,7 +154,7 @@ export class MeetProvider implements MeetingProviderInterface {
             }
 
             if (!askToJoinClicked) {
-                Logger.info(
+                Logger.debug(
                     'All attempts with alternating selectors failed, trying by aria-label',
                 )
 
@@ -164,13 +164,13 @@ export class MeetProvider implements MeetingProviderInterface {
                         'button[aria-label*="Join"], button[aria-label*="join now"]',
                     )
                     const count = await joinButtons.count()
-                    Logger.info(
+                    Logger.debug(
                         `Found ${count} buttons with Join in aria-label`,
                     )
 
                     if (count > 0) {
                         await joinButtons.first().click()
-                        Logger.info('Clicked join button by aria-label')
+                        Logger.debug('Clicked join button by aria-label')
                         askToJoinClicked = true
                     }
                 } catch (e) {
@@ -232,12 +232,12 @@ export class MeetProvider implements MeetingProviderInterface {
 
                 for (let attempt = 1; attempt <= maxAttempts; attempt++) {
                     if (await changeLayout(page, attempt)) {
-                        Logger.info(
+                        Logger.debug(
                             `Layout change successful on attempt ${attempt}`,
                         )
                         break
                     }
-                    Logger.warn(`Attempt ${attempt} failed`)
+                    Logger.debug(`Attempt ${attempt} failed for layout change`)
                     await clickOutsideModal(page)
                     await page.waitForTimeout(500)
                 }
@@ -342,7 +342,7 @@ async function findShowEveryOne(
                 try {
                     await buttons.first().click()
                 } catch (e) {
-                    Logger.info('Failed to click People button:', { error: e })
+                    Logger.warn('Failed to click People button:', { error: e })
                     showEveryOneFound = false
                 }
             }
@@ -553,7 +553,7 @@ async function clickWithInnerText(
     shouldClick: boolean = true,
 ): Promise<boolean> {
     Logger.withFunctionName('clickWithInnerText')
-    Logger.info(
+    Logger.debug(
         `Attempting to find ${selector} with texts: ${texts.join(', ')}`,
     )
 
@@ -585,7 +585,7 @@ async function clickWithInnerText(
             }
 
             for (const text of texts) {
-                Logger.info(
+                Logger.debug(
                     `Attempt ${i + 1}/${maxAttempts} - Looking for "${text}" in ${selector}`,
                 )
 
@@ -600,15 +600,15 @@ async function clickWithInnerText(
                 for (const sel of selectors) {
                     const element = page.locator(sel)
                     const count = await element.count()
-                    Logger.info(`  - Selector "${sel}" found ${count} elements`)
+                    Logger.debug(`  - Selector "${sel}" found ${count} elements`)
 
                     if (count > 0) {
-                        Logger.info(
+                        Logger.debug(
                             `  - Found element with text "${text}" using selector "${sel}"`,
                         )
                         if (shouldClick) {
                             await element.click()
-                            Logger.info(
+                            Logger.debug(
                                 `  - Clicked on element with text "${text}"`,
                             )
                         }
@@ -617,7 +617,7 @@ async function clickWithInnerText(
                 }
             }
         } catch (e) {
-            Logger.warn(
+            Logger.debug(
                 `Error in clickWithInnerText (attempt ${i + 1}/${maxAttempts}):`,
                 { error: e },
             )
@@ -647,7 +647,7 @@ async function changeLayout(
 
         // First check if we are still in the meeting
         if (!(await isInMeeting(page))) {
-            Logger.info(
+            Logger.warn(
                 'Bot is no longer in the meeting, stopping layout change',
             )
             return false
@@ -674,7 +674,7 @@ async function changeLayout(
 
         // Check again if we are still in the meeting
         if (!(await isInMeeting(page))) {
-            Logger.info(
+            Logger.warn(
                 'Bot is no longer in the meeting after clicking More options',
             )
             return false
@@ -696,7 +696,7 @@ async function changeLayout(
 
         // Check again if we are still in the meeting
         if (!(await isInMeeting(page))) {
-            Logger.info(
+            Logger.warn(
                 'Bot is no longer in the meeting after clicking Change layout',
             )
             return false
@@ -704,7 +704,7 @@ async function changeLayout(
 
         // 3. Click in "Sidebar" or "Spotlight"
         if (GLOBAL.get().recording_mode === 'fixing_participants') {
-            Logger.info('Looking for sidebar option...')
+            Logger.debug('Looking for sidebar option...')
             const sidebarOption = page.locator(
                 [
                     'label:has-text("Sidebar"):has(input[type="radio"])',
@@ -716,7 +716,7 @@ async function changeLayout(
             await sidebarOption.waitFor({ state: 'visible', timeout: 3000 })
             await sidebarOption.click()
         } else {
-            Logger.info('Looking for Spotlight option...')
+            Logger.debug('Looking for Spotlight option...')
             const spotlightOption = page.locator(
                 [
                     'label:has-text("Spotlight"):has(input[type="radio"])',
@@ -752,7 +752,7 @@ async function changeLayout(
         await htmlSnapshot.captureSnapshot(page, `meet_layout_change_operation_failure_attempt_${currentAttempt}`)
 
         if (currentAttempt < maxAttempts) {
-            Logger.info(
+            Logger.debug(
                 `Retrying layout change (attempt ${currentAttempt + 1}/${maxAttempts})...`,
             )
             await page.waitForTimeout(1000)
@@ -803,10 +803,10 @@ async function activateMicrophone(page: Page): Promise<boolean> {
         )
         if ((await microphoneButton.count()) > 0) {
             await microphoneButton.click()
-            Logger.info('Microphone activated successfully')
+            Logger.debug('Microphone activated successfully')
             return true
         } else {
-            Logger.info('Microphone is already active or button not found')
+            Logger.debug('Microphone is already active or button not found')
             return false
         }
     } catch (error) {
@@ -824,10 +824,10 @@ async function deactivateMicrophone(page: Page): Promise<boolean> {
         )
         if ((await microphoneButton.count()) > 0) {
             await microphoneButton.click()
-            Logger.info('Microphone deactivated successfully')
+            Logger.debug('Microphone deactivated successfully')
             return true
         } else {
-            Logger.info('Microphone is already deactivated or button not found')
+            Logger.debug('Microphone is already deactivated or button not found')
             return false
         }
     } catch (error) {

@@ -53,8 +53,6 @@ async function initializeMeetingParams(): Promise<void> {
             process.env.MEETING_URL,
         )
 
-        Logger.info(`Initializing meeting parameters for meeting in provider ${params.meetingProvider}`);
-
         GLOBAL.set(params)
         PathManager.getInstance().initializePaths()
     } catch (error) {
@@ -121,7 +119,6 @@ async function handleFailedRecording(): Promise<void> {
  * - PascalCase => Classes
  */
 ; (async () => {
-    Logger.info(`Starting meeting bot for bot ${process.env.BOT_ID}`)
     await initializeMeetingParams()
 
     try {

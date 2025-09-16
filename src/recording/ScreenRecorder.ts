@@ -207,7 +207,7 @@ export class ScreenRecorder extends EventEmitter {
                     exitCode === 0 &&
                     output.includes(VIRTUAL_SPEAKER_MONITOR)
                 ) {
-                    Logger.info(
+                    Logger.debug(
                         `Audio device ready after ${attempt} attempt(s)`,
                     )
                     return
@@ -249,7 +249,7 @@ export class ScreenRecorder extends EventEmitter {
             })
 
             if (testExitCode === 0) {
-                Logger.info(
+                Logger.debug(
                     'FFmpeg audio test successful - devices are ready',
                 )
                 return
@@ -267,7 +267,7 @@ export class ScreenRecorder extends EventEmitter {
         Logger.withFunctionName('buildNativeFFmpegArgs')
         const args: string[] = []
 
-        Logger.info(
+        Logger.debug(
             'Building FFmpeg args for separate audio/video recording...',
         )
 
@@ -457,7 +457,7 @@ export class ScreenRecorder extends EventEmitter {
         })
 
         this.ffmpegProcess.on('exit', async (code) => {
-            Logger.info(`FFmpeg exited with code ${code}`)
+            Logger.debug(`FFmpeg exited with code ${code}`)
 
             // Consider recording successful if:
             // - Exit code 0 (normal completion)
@@ -591,7 +591,7 @@ export class ScreenRecorder extends EventEmitter {
                     file.startsWith(`${botUuid}-`) && file.endsWith('.wav'),
             )
 
-            Logger.info(`Uploading ${chunkFiles.length} audio chunks...`)
+            Logger.debug(`Uploading ${chunkFiles.length} audio chunks...`)
 
             for (const filename of chunkFiles) {
                 const chunkPath = path.join(chunksDir, filename)
@@ -609,7 +609,7 @@ export class ScreenRecorder extends EventEmitter {
                     }
 
                     const s3Key = `${botUuid}/temporary_audio/${filename}`
-                    Logger.info(
+                    Logger.debug(
                         `Uploading chunk: ${filename} (${stats.size} bytes)`,
                     )
 
@@ -619,7 +619,7 @@ export class ScreenRecorder extends EventEmitter {
                         s3Key
                     )
 
-                    Logger.info(`Chunk uploaded: ${filename}`)
+                    Logger.debug(`Chunk uploaded: ${filename}`)
                 } catch (error) {
                     Logger.warn(`Failed to upload chunk ${filename}:`, { error })
                 }
@@ -680,19 +680,19 @@ export class ScreenRecorder extends EventEmitter {
             return
         }
 
-        Logger.info('Stop recording requested - starting grace period...')
+        Logger.debug('Stop recording requested - starting grace period...')
         this.gracePeriodActive = true
 
         const gracePeriodMs = GRACE_PERIOD_SECONDS * 1000
 
         // Wait for grace period to allow clean ending
-        Logger.info(
+        Logger.debug(
             `Grace period: ${GRACE_PERIOD_SECONDS}s for clean ending`,
         )
 
         await new Promise<void>((resolve) => {
             setTimeout(() => {
-                Logger.info(
+                Logger.debug(
                     'Grace period completed - stopping FFmpeg cleanly',
                 )
                 resolve()
@@ -804,12 +804,12 @@ export class ScreenRecorder extends EventEmitter {
             const tempDir = PathManager.getInstance().getTempPath()
             const rawAudioPath = path.join(tempDir, 'raw.wav')
 
-            Logger.info('Processing audio-only recording...')
+            Logger.debug('Processing audio-only recording...')
 
             if (fs.existsSync(rawAudioPath)) {
                 // Copy raw audio to final output location
                 fs.copyFileSync(rawAudioPath, this.audioOutputPath)
-                Logger.info(`Audio copied to: ${this.audioOutputPath}`)
+                Logger.debug(`Audio copied to: ${this.audioOutputPath}`)
 
                 // Create audio chunks from the final audio file
                 await this.createAudioChunks(this.audioOutputPath)
@@ -817,7 +817,7 @@ export class ScreenRecorder extends EventEmitter {
                 Logger.error('Raw audio file not found:', { rawAudioPath })
             }
 
-            Logger.info('Audio-only processing completed')
+            Logger.debug('Audio-only processing completed')
             return
         }
 
@@ -868,17 +868,17 @@ export class ScreenRecorder extends EventEmitter {
                 FLASH_SCREEN_SLEEP_TIME) /
             1000
 
-        Logger.info(`Debug values:`)
-        Logger.info(
+        Logger.debug(`Debug values:`)
+        Logger.debug(
             `   syncResult.videoTimestamp: ${syncResult.videoTimestamp}s`,
         )
-        Logger.info(
+        Logger.debug(
             `   syncResult.audioTimestamp: ${syncResult.audioTimestamp}s`,
         )
-        Logger.info(`   meetingStartTime: ${this.meetingStartTime}`)
-        Logger.info(`   recordingStartTime: ${this.recordingStartTime}`)
-        Logger.info(`   FLASH_SCREEN_SLEEP_TIME: ${FLASH_SCREEN_SLEEP_TIME}`)
-        Logger.info(
+        Logger.debug(`   meetingStartTime: ${this.meetingStartTime}`)
+        Logger.debug(`   recordingStartTime: ${this.recordingStartTime}`)
+        Logger.debug(`   FLASH_SCREEN_SLEEP_TIME: ${FLASH_SCREEN_SLEEP_TIME}`)
+        Logger.debug(
             `   Time diff: ${(this.meetingStartTime - this.recordingStartTime - FLASH_SCREEN_SLEEP_TIME) / 1000}s`,
         )
 
@@ -886,12 +886,12 @@ export class ScreenRecorder extends EventEmitter {
         const audioPadding =
             syncResult.videoTimestamp - syncResult.audioTimestamp
 
-        Logger.info(`Audio padding needed: ${audioPadding.toFixed(3)}s`)
+        Logger.debug(`Audio padding needed: ${audioPadding.toFixed(3)}s`)
 
         // 5. Prepare audio with padding or trimming if needed
         const processedAudioPath = path.join(tempDir, 'processed.wav')
         if (audioPadding > 0) {
-            Logger.info(
+            Logger.debug(
                 `Adding ${audioPadding.toFixed(3)}s silence to audio start (video ahead)...`,
             )
             await this.addSilencePadding(
@@ -900,7 +900,7 @@ export class ScreenRecorder extends EventEmitter {
                 audioPadding,
             )
         } else if (audioPadding < 0) {
-            Logger.info(
+            Logger.debug(
                 `Trimming ${(audioPadding * -1).toFixed(3)}s from audio start (video behind)...`,
             )
             await this.trimAudioStart(
@@ -924,7 +924,7 @@ export class ScreenRecorder extends EventEmitter {
             audioDuration,
         )
 
-        Logger.info(`Final duration: ${finalDuration.toFixed(2)}s`)
+        Logger.debug(`Final duration: ${finalDuration.toFixed(2)}s`)
         await this.finalTrimFromOffset(
             mergedPath,
             this.outputPath,
@@ -938,7 +938,7 @@ export class ScreenRecorder extends EventEmitter {
                 this.outputPath,
                 this.audioOutputPath,
             )
-            Logger.info(
+            Logger.debug(
                 `Audio extracted from final video: ${this.audioOutputPath}`,
             )
 
@@ -959,7 +959,7 @@ export class ScreenRecorder extends EventEmitter {
             mergedPath,
         ])
 
-        Logger.info('Efficient sync and merge completed successfully')
+        Logger.debug('Efficient sync and merge completed successfully')
     }
 
     private async addSilencePadding(
@@ -988,7 +988,7 @@ export class ScreenRecorder extends EventEmitter {
             silenceFile,
         ]
 
-        Logger.info(`Creating ${paddingSeconds.toFixed(3)}s silence file`)
+        Logger.debug(`Creating ${paddingSeconds.toFixed(3)}s silence file`)
         await this.runFFmpeg(silenceArgs, 'addSilencePadding', paddingSeconds)
 
         // Create concat list with absolute paths (no escaping needed)
@@ -1077,7 +1077,7 @@ file '${absoluteInputPath}'`
             outputPath,
         ]
 
-        Logger.info(
+        Logger.debug(
             `Merging video and audio (ultra-fast copy + AAC audio - keyframes already optimized)`,
         )
 
@@ -1142,7 +1142,7 @@ file '${absoluteInputPath}'`
             audioPath,
         ]
 
-        Logger.info(
+        Logger.debug(
             'Extracting audio from video (converting to WAV PCM 16kHz mono)',
         )
 
@@ -1188,7 +1188,7 @@ file '${absoluteInputPath}'`
             chunkPattern,
         ]
 
-        Logger.info(
+        Logger.debug(
             `Creating audio chunks (${chunkDuration}s each) from ${duration.toFixed(1)}s audio`,
         )
         try {
@@ -1255,7 +1255,7 @@ file '${absoluteInputPath}'`
         Logger.withFunctionName('runFFmpeg')
         const timeout = calculateFFmpegTimeout(operation, fileSizeMB)
 
-        Logger.info(
+        Logger.debug(
             `FFmpeg ${operation}: timeout set to ${timeout / 1000}s${fileSizeMB ? ` (estimated file size: ${fileSizeMB}MB)` : ''}`,
         )
 

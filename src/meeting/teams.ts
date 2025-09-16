@@ -517,7 +517,7 @@ async function clickWithInnerText(
             )
         } catch (e) {
             if (i === iterations - 1) {
-                Logger.warn(`Error in clickWithInnerText (last attempt):`, { error: e })
+                Logger.debug(`Error in clickWithInnerText (last attempt):`, { error: e })
             }
             continueButton = false
         }
@@ -528,7 +528,7 @@ async function clickWithInnerText(
 
         // Only log if found or on final attempt
         if (continueButton || i === iterations - 1) {
-            Logger.info(
+            Logger.debug(
                 `${innerText} ${click ? 'clicked' : 'found'} : ${continueButton}`,
             )
         }

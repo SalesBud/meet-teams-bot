@@ -244,7 +244,7 @@ export class Streaming {
             return
         }
 
-        Logger.info('Stopping simplified streaming service...')
+        Logger.debug('Stopping simplified streaming service...')
 
         // Close external WebSockets only
         this.closeExternalWebSockets()

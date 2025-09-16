@@ -130,7 +130,7 @@ export async function server() {
     // Get Recording Server Build Version Info
     app.get('/version', async (_req, res) => {
         Logger.withFunctionName('version_endpoint')
-        Logger.info(`version requested`)
+        Logger.debug(`version requested`)
         // @ts-ignore-next-line
         await import('./buildInfo.json')
             .then((buildInfo) => {
@@ -273,7 +273,7 @@ export async function server() {
 
     try {
         app.listen(PORT, HOST)
-        Logger.info(`Running on http://${HOST}:${PORT}`)
+        Logger.debug(`Server running on http://${HOST}:${PORT}`)
     } catch (e) {
         Logger.error(`Failed to register instance: ${e}`)
     }

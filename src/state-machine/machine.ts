@@ -17,13 +17,8 @@ export class MeetingStateMachine {
     private provider: MeetingProviderInterface
 
     static init() {
-        Logger.withFunctionName('init')
         if (MeetingStateMachine.instance == null) {
             MeetingStateMachine.instance = new MeetingStateMachine()
-            Logger.info(
-                '*** INIT MeetingStateMachine.instance',
-                { meeting_url: GLOBAL.get().meeting_url },
-            )
         }
     }
 

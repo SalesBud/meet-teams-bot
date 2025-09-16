@@ -20,7 +20,7 @@ export class WaitingRoomState extends BaseState {
 
             // Get meeting information
             const { meetingId, password } = await this.getMeetingInfo()
-            Logger.info('Meeting info retrieved', {
+            Logger.debug('Meeting info retrieved', {
                 meetingId,
                 hasPassword: !!password,
             })

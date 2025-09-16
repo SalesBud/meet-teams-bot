@@ -17,7 +17,7 @@ export async function openBrowser(
 
     try {
         Logger.withFunctionName('openBrowser')
-        Logger.info('Launching persistent context with exact extension args...')
+        Logger.debug('Launching persistent context with exact extension args...')
 
         // Get Chrome path from environment variable or use default
         const chromePath = process.env.CHROME_PATH || '/usr/bin/google-chrome'
