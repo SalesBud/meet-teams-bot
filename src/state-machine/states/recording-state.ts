@@ -231,13 +231,13 @@ export class RecordingState extends BaseState {
     }
     private async handleMeetingEnd(reason: MeetingEndReason): Promise<void> {
         Logger.withFunctionName('handleMeetingEnd')
-        Logger.info(`Handling meeting end with reason: ${reason}`)
+        Logger.debug(`Handling meeting end with reason: ${reason}`)
         try {
             // Try to close the meeting but don't let an error here affect the rest
             try {
                 // If the reason is bot_removed, we know the meeting is already effectively closed
                 if (reason === MeetingEndReason.BotRemoved) {
-                    Logger.info(
+                    Logger.debug(
                         'Bot was removed from meeting, skipping active closure step',
                     )
                 } else {
@@ -255,7 +255,7 @@ export class RecordingState extends BaseState {
             // These critical steps must execute regardless of previous steps
             await Events.callEnded()
 
-            Logger.info('Setting isProcessing to false to end recording loop')
+            Logger.debug('Setting isProcessing to false to end recording loop')
         } catch (error) {
             Logger.error('Error during meeting end handling:', { error })
         } finally {

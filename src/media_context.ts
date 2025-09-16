@@ -73,7 +73,7 @@ abstract class MediaContext {
         }
 
         let res = this.process.kill('SIGTERM')
-        Logger.info(`Signal sended to process : ${res}`)
+        Logger.debug(`Signal sended to process : ${res}`)
 
         await this.promise
             .then((code) => {

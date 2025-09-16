@@ -20,7 +20,7 @@ export class WaitingRoomState extends BaseState {
 
             // Get meeting information
             const { meetingId, password } = await this.getMeetingInfo()
-            Logger.info('Meeting info retrieved', {
+            Logger.debug('Meeting info retrieved', {
                 meetingId,
                 hasPassword: !!password,
             })
@@ -70,7 +70,7 @@ export class WaitingRoomState extends BaseState {
             // If everything is fine, move to the InCall state
             return this.transition(MeetingStateType.InCall)
         } catch (error) {
-            Logger.error('Error in waiting room state:', { error })
+            Logger.warn('Error in waiting room state:', { error })
 
             // Handle specific error types based on MeetingEndReason
             const endReason = GLOBAL.getEndReason()

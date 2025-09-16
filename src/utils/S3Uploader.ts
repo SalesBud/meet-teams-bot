@@ -122,7 +122,7 @@ export class S3Uploader {
                 const batchNumber = Math.floor(i / MAX_CONCURRENT_UPLOADS) + 1
                 const totalBatches = Math.ceil(files.length / MAX_CONCURRENT_UPLOADS)
 
-                Logger.info(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} files)...`)
+                Logger.debug(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} files)...`)
 
                 // Upload batch concurrently using our existing uploadFile function
                 const batchPromises = batch.map(async (file) => {

@@ -93,7 +93,7 @@ export class InCallState extends BaseState {
 
     private async startSpeakersObservation(): Promise<void> {
         Logger.withFunctionName('startSpeakersObservation')
-        Logger.info(
+        Logger.debug(
             `Starting speakers observation for ${GLOBAL.get().meetingProvider}`,
         )
 

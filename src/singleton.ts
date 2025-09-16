@@ -151,7 +151,7 @@ class Global {
         this.endReason = reason
 
         if (NORMAL_END_REASONS.includes(reason)) {
-            Logger.info(`Clearing error state for normal termination: ${reason}`)
+            Logger.debug(`Clearing error state for normal termination: ${reason}`)
             // This ensures that an error message isn't propagated to the client for normal termination
             this.clearError()
         }

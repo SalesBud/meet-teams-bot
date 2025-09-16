@@ -22,7 +22,7 @@ export function generateBranding(
             )
         })()
         command.stderr.addListener('data', (data) => {
-            Logger.info(data.toString())
+            Logger.debug(data.toString())
         })
 
         return {

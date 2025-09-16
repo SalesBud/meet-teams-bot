@@ -61,7 +61,7 @@ export default class AssemblyAiService {
 
         const tempFilePath = path.join(tempDir, `transcript-${bot_id}-${Date.now()}.json`);
         fs.writeFileSync(tempFilePath, JSON.stringify(transcript));
-        Logger.info(`Transcription saved to ${tempFilePath}`);
+        Logger.debug(`Transcription saved to ${tempFilePath}`);
         return tempFilePath;
     }
 }

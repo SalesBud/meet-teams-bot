@@ -63,7 +63,7 @@ export class ErrorState extends BaseState {
         }
 
         // Log the error with all details
-        Logger.error('Meeting error occurred:', errorDetails)
+        Logger.warn('Meeting error occurred:', errorDetails)
     }
 
     private async notifyError(): Promise<void> {

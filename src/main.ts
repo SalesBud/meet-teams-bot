@@ -12,7 +12,7 @@ import {
 import Logger from './utils/DatadogLogger'
 import { PathManager } from './utils/PathManager'
 
-import { getErrorMessageFromCode } from './state-machine/types'
+import { BOT_NOT_ACCEPTED_ERROR_CODES, getErrorMessageFromCode } from './state-machine/types'
 import { MeetingParams } from './types'
 
 import { exit } from 'process'
@@ -52,8 +52,6 @@ async function initializeMeetingParams(): Promise<void> {
         params.meetingProvider = detectMeetingProvider(
             process.env.MEETING_URL,
         )
-
-        Logger.info(`Initializing meeting parameters for meeting in provider ${params.meetingProvider}`);
 
         GLOBAL.set(params)
         PathManager.getInstance().initializePaths()
@@ -121,7 +119,6 @@ async function handleFailedRecording(): Promise<void> {
  * - PascalCase => Classes
  */
 ; (async () => {
-    Logger.info(`Starting meeting bot for bot ${process.env.BOT_ID}`)
     await initializeMeetingParams()
 
     try {
@@ -152,7 +149,7 @@ async function handleFailedRecording(): Promise<void> {
         }
     } catch (error) {
         // Handle explicit errors from state machine
-        Logger.error(
+        Logger.warn(
             'Meeting failed:',
             error instanceof Error ? error.message : error,
         )
@@ -178,8 +175,12 @@ async function handleFailedRecording(): Promise<void> {
                 Logger.error('Failed to upload logs to S3:', error)
             }
 
-            const transcriptionData = await new TranscriptionProcess().createTranscriptionData()
-            await Events.transcriptionFinished(transcriptionData as TranscriptionFinishedData)
+            if (BOT_NOT_ACCEPTED_ERROR_CODES.includes(GLOBAL.getEndReason())) {
+                Logger.warn('Skipping transcription for error code:', { errorCode: GLOBAL.getEndReason() })
+            } else {
+                const transcriptionData = await new TranscriptionProcess().createTranscriptionData()
+                await Events.transcriptionFinished(transcriptionData as TranscriptionFinishedData)
+            }
         }
         Logger.info('Exiting instance')
         exit(0)
