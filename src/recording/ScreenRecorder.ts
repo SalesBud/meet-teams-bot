@@ -835,14 +835,14 @@ export class ScreenRecorder extends EventEmitter {
 
         // 2. Check if meetingStartTime is properly set - if not, bot was not accepted
         if (!hasMeetingStartTime) {
-            Logger.error(
+            Logger.debug(
                 `Bot not accepted - meetingStartTime not set (${this.meetingStartTime})`,
             )
-            Logger.error(`Timing debug:`)
-            Logger.error(`   recordingStartTime: ${this.recordingStartTime}`)
-            Logger.error(`   meetingStartTime: ${this.meetingStartTime}`)
-            Logger.error(`   Current time: ${Date.now()}`)
-            Logger.error(
+            Logger.debug(`Timing debug:`)
+            Logger.debug(`   recordingStartTime: ${this.recordingStartTime}`)
+            Logger.debug(`   meetingStartTime: ${this.meetingStartTime}`)
+            Logger.debug(`   Current time: ${Date.now()}`)
+            Logger.debug(
                 `   Recording duration: ${Date.now() - this.recordingStartTime}ms`,
             )
 
@@ -1278,22 +1278,22 @@ file '${absoluteInputPath}'`
                         .split('\n')
                         .slice(-3)
                         .join('\n') // Last 3 lines
-                    Logger.error(`FFmpeg error: ${errorMsg}`)
+                    Logger.warn(`FFmpeg error: ${errorMsg}`)
                     if (stderrPreview) {
-                        Logger.error(`FFmpeg stderr: ${stderrPreview}`)
+                        Logger.warn(`FFmpeg stderr: ${stderrPreview}`)
                     }
                     reject(new Error(errorMsg))
                 }
             })
 
             process.on('error', (error) => {
-                Logger.error(`FFmpeg process error: ${error.message}`)
+                Logger.warn(`FFmpeg process error: ${error.message}`)
                 reject(error)
             })
 
             // Add dynamic timeout to prevent hanging
             const timeoutId = setTimeout(() => {
-                Logger.error(
+                Logger.warn(
                     `FFmpeg timeout after ${timeout / 1000}s for ${operation}, killing process`,
                 )
                 process.kill('SIGKILL')
