@@ -149,7 +149,7 @@ async function handleFailedRecording(): Promise<void> {
         }
     } catch (error) {
         // Handle explicit errors from state machine
-        Logger.error(
+        Logger.warn(
             'Meeting failed:',
             error instanceof Error ? error.message : error,
         )

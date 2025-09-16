@@ -47,6 +47,12 @@ export const BOT_NOT_ACCEPTED_ERROR_CODES = [
     MeetingEndReason.Internal
 ]
 
+export const BOT_WARNING_CODES = [
+    MeetingEndReason.BotNotAccepted,
+    MeetingEndReason.BotRemovedTooEarly,
+    MeetingEndReason.TimeoutWaitingToStart
+]
+
 // Get human-readable error message from error code
 export function getErrorMessageFromCode(errorCode: MeetingEndReason): string {
     switch (errorCode) {

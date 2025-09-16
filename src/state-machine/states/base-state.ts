@@ -1,7 +1,8 @@
 import { Page } from '@playwright/test'
 import { listenPage } from '../../browser/page-logger'
-import { MeetingContext, MeetingStateType, StateExecuteResult } from '../types'
+import { BOT_WARNING_CODES, MeetingContext, MeetingStateType, StateExecuteResult } from '../types'
 import Logger from '../../utils/DatadogLogger'
+import { GLOBAL } from '../../singleton'
 
 export abstract class BaseState {
     protected context: MeetingContext
@@ -35,7 +36,11 @@ export abstract class BaseState {
 
     protected async handleError(error: Error): StateExecuteResult {
         Logger.withFunctionName('handleError')
-        Logger.error(`Error in state ${this.stateType}:`, { error })
+        if (BOT_WARNING_CODES.includes(GLOBAL.getEndReason())) {
+            Logger.warn(`Error in state ${this.stateType}:`, { error })
+        } else {
+            Logger.error(`Error in state ${this.stateType}:`, { error })
+        }
         return this.transition(MeetingStateType.Error)
     }
 }
