@@ -108,9 +108,9 @@ export default class TranscriptionProcess {
             await this.saveTranscriptToS3(transcriptPath, bot_id)
 
             const unifiedTalks = extractSpeechSegments(speakersLog)
-            const detectedSpeakers = transcript.utterances.map(
+            const detectedSpeakers = transcript.utterances?.map(
                 (utterance) => utterance.speaker,
-            )
+            ) || []
 
             const mappedUtterances =
                 await SpeakerMappingService.replaceSpeakerLabels(
@@ -189,11 +189,11 @@ export default class TranscriptionProcess {
                 (transcript: any) => ({
                     speaker: transcript.speaker,
                     offset: transcript.start,
-                    words: transcript.words.map((word: any) => ({
+                    words: transcript.words?.map((word: any) => ({
                         start: word.start / 1000,
                         end: word.end / 1000,
                         word: word.text,
-                    })),
+                    })) || [],
                 }),
             )
 

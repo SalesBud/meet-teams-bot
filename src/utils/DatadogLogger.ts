@@ -140,8 +140,10 @@ export default class Logger {
       baseMeta.error = normalizedError;
     }
 
-    baseMeta.error.stackTrace = Logger.formatStackTrace(baseMeta.error);
-    baseMeta.error.stackString = String(baseMeta.error.stack);
+    if (baseMeta.error) {
+      baseMeta.error.stackTrace = Logger.formatStackTrace(baseMeta.error);
+      baseMeta.error.stackString = String(baseMeta.error.stack);
+    }
 
     if (baseMeta.error && baseMeta.error.stack && baseMeta.stack) {
       delete baseMeta.stack;

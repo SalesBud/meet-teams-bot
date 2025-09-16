@@ -36,7 +36,11 @@ export default class AssemblyAiService {
         });
 
         const transcriptPath = this.saveTranscriptLocal(transcript);
-        Logger.info(`Transcription generated with ${transcript.words.length} words and ${transcript.utterances.length} utterances`);
+
+        const wordsCount = transcript?.words?.length || 0;
+        const utterancesCount = transcript?.utterances?.length || 0;
+        
+        Logger.info(`Transcription generated with ${wordsCount} words and ${utterancesCount} utterances`);
         return {
             transcript,
             transcriptPath
