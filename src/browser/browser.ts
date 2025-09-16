@@ -10,7 +10,7 @@ export async function openBrowser(
 ): Promise<{ browser: BrowserContext }> {
     // Use different resolution based on recording mode
     const recordingMode = GLOBAL.get().recording_mode
-    const isFixingParticipants = recordingMode === 'fixing_participants' || recordingMode === 'FixingParticipants'
+    const isFixingParticipants = recordingMode === 'fixing_participants'
     
     const width = isFixingParticipants ? 1640 : 1280
     const height = 720

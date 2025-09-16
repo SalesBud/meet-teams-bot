@@ -271,12 +271,6 @@ export class ScreenRecorder extends EventEmitter {
             'Building FFmpeg args for separate audio/video recording...',
         )
 
-        // Use different resolution based on recording mode
-        const recordingMode = GLOBAL.get().recording_mode
-        const isFixingParticipants = recordingMode === 'fixing_participants'
-        const videoSize = isFixingParticipants ? '1280x880' : '1280x720'
-        const cropSize = isFixingParticipants ? '1280:720:0:160' : '1280:720:0:0'
-
         const screenshotsPath = PathManager.getInstance().getScreenshotsPath()
         const timestamp = Date.now()
         const screenshotPattern = path.join(
@@ -302,7 +296,7 @@ export class ScreenRecorder extends EventEmitter {
                 '-f',
                 'x11grab',
                 '-video_size',
-                videoSize,
+                '1280x880',
                 '-framerate',
                 '30',
                 '-i',
@@ -328,7 +322,7 @@ export class ScreenRecorder extends EventEmitter {
                 '-map',
                 '1:v:0',
                 '-vf',
-                `fps=${1 / SCREENSHOT_PERIOD},crop=${cropSize},scale=${SCREENSHOT_WIDTH}:${SCREENSHOT_HEIGHT}`,
+                `fps=${1 / SCREENSHOT_PERIOD},crop=1280:720:0:160,scale=${SCREENSHOT_WIDTH}:${SCREENSHOT_HEIGHT}`,
                 '-q:v',
                 '3', // High quality JPEG compression
                 '-f',
@@ -360,7 +354,7 @@ export class ScreenRecorder extends EventEmitter {
                 '-f',
                 'x11grab',
                 '-video_size',
-                videoSize,
+                '1280x880',
                 '-framerate',
                 '30',
                 '-i',
@@ -398,7 +392,7 @@ export class ScreenRecorder extends EventEmitter {
                 '-refs',
                 '1',
                 '-vf',
-                `crop=${cropSize}`,
+                'crop=1280:720:0:160',
                 '-avoid_negative_ts',
                 'make_zero',
                 '-f',
@@ -427,7 +421,7 @@ export class ScreenRecorder extends EventEmitter {
                 '-map',
                 '0:v:0',
                 '-vf',
-                `fps=${1 / SCREENSHOT_PERIOD},crop=${cropSize},scale=${SCREENSHOT_WIDTH}:${SCREENSHOT_HEIGHT}`,
+                `fps=${1 / SCREENSHOT_PERIOD},crop=1280:720:0:160,scale=${SCREENSHOT_WIDTH}:${SCREENSHOT_HEIGHT}`,
                 '-q:v',
                 '3', // High quality JPEG compression
                 '-f',

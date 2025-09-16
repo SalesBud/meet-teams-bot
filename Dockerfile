@@ -62,7 +62,7 @@ mkdir -p $PULSE_RUNTIME_PATH\n\
 if [ "$RECORDING_MODE" = "fixing_participants" ]; then\n\
     Xvfb :99 -screen 0 1640x880x24 -ac +extension GLX +render -noreset -nocursor -nolisten tcp &\n\
 else\n\
-    Xvfb :99 -screen 0 1280x720x24 -ac +extension GLX +render -noreset -nocursor -nolisten tcp &\n\
+    Xvfb :99 -screen 0 1280x880x24 -ac +extension GLX +render -noreset -nocursor -nolisten tcp &\n\
 fi\n\
 XVFB_PID=$!\n\
 \n# Hide cursor completely at X11 level\n\
