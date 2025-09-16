@@ -98,6 +98,17 @@ export class Events {
         })
     }
 
+    static async failed() {
+        Logger.withFunctionName('failed')
+        Logger.warn('Events.failed called')
+        return Events.EVENTS?.send('failed', {
+            bot_id: Events.EVENTS?.botId,
+            error: 'BotNotAccepted',
+            message: 'BotNotAccepted'
+        }, 'failed')
+    }
+
+
     private constructor(
         private botId: string,
         private apiKey: string,
