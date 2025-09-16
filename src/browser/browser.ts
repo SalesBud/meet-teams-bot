@@ -2,13 +2,18 @@ import { BrowserContext, chromium } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 import Logger from '../utils/DatadogLogger'
+import { GLOBAL } from '../singleton'
 
 export async function openBrowser(
     slowMo: boolean = false,
     brandingVideoPath?: string,
 ): Promise<{ browser: BrowserContext }> {
-    const width = 1280 // 640
-    const height = 720 // 480
+    // Use different resolution based on recording mode
+    const recordingMode = GLOBAL.get().recording_mode
+    const isFixingParticipants = recordingMode === 'fixing_participants' || recordingMode === 'FixingParticipants'
+    
+    const width = isFixingParticipants ? 1640 : 1280
+    const height = 720
 
     try {
         Logger.withFunctionName('openBrowser')

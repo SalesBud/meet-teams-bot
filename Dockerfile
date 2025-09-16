@@ -41,9 +41,6 @@ RUN yarn build
 # Make branding scripts executable
 RUN chmod +x generate_custom_branding.sh
 
-# Make branding scripts executable
-RUN chmod +x generate_branding.sh generate_custom_branding.sh
-
 # Environment configuration
 ENV NODE_OPTIONS="--max-old-space-size=2048"
 ENV SERVERLESS=true
@@ -61,7 +58,12 @@ export PULSE_RUNTIME_PATH=/tmp/pulse\n\
 export XDG_RUNTIME_DIR=/tmp/pulse\n\
 mkdir -p $PULSE_RUNTIME_PATH\n\
 \n# Start virtual display with enhanced cursor hiding\n\
-Xvfb :99 -screen 0 1280x880x24 -ac +extension GLX +render -noreset -nocursor -nolisten tcp &\n\
+# Use different resolution based on recording mode\n\
+if [ "$RECORDING_MODE" = "fixing_participants" ]; then\n\
+    Xvfb :99 -screen 0 1640x880x24 -ac +extension GLX +render -noreset -nocursor -nolisten tcp &\n\
+else\n\
+    Xvfb :99 -screen 0 1280x720x24 -ac +extension GLX +render -noreset -nocursor -nolisten tcp &\n\
+fi\n\
 XVFB_PID=$!\n\
 \n# Hide cursor completely at X11 level\n\
 sleep 2\n\
