@@ -177,6 +177,7 @@ async function handleFailedRecording(): Promise<void> {
 
             if (BOT_NOT_ACCEPTED_ERROR_CODES.includes(GLOBAL.getEndReason())) {
                 Logger.warn('Skipping transcription for error code:', { errorCode: GLOBAL.getEndReason() })
+                await Events.failed()
             } else {
                 const transcriptionData = await new TranscriptionProcess().createTranscriptionData()
                 await Events.transcriptionFinished(transcriptionData as TranscriptionFinishedData)
