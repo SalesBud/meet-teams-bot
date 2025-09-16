@@ -46,7 +46,7 @@ export default class SpeakerMappingService {
                 `Speakers from unified_talks: ${JSON.stringify(unifiedTalks).slice(0, 100)}`
             );
         }
-
+        Logger.info(`Speaker mapping completed:`, { mapping });
         return mapping;
     }
 
@@ -240,7 +240,6 @@ export default class SpeakerMappingService {
                 speaker: mapping[utterance.speaker] || utterance.speaker
             }));
 
-            Logger.info(`Speakers replaced successfully`);
             return updatedSegments;
         } catch (error) {
             Logger.error(`Error replacing speakers: ${error}`);

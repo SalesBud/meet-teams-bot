@@ -25,10 +25,8 @@ export default class TranscriptionProcess {
                 bucketService,
             )
 
-            if (!speakersLog) {
-                Logger.error('Failed to process speaker_separation.log, file not found', {
-                    bot_id,
-                })
+            if (!speakersLog || !speakersLog.length) {
+                Logger.error('Failed to process speaker_separation.log, file not found')
                 return {
                     event: MeetingBotStatus.FAILED,
                     error: GENERAL_ERROR_CODE,
@@ -172,7 +170,7 @@ export default class TranscriptionProcess {
             bucketName,
         )
 
-        const speakersLog = JSON.parse(speakersLogBuffer.toString()).flat()
+        const speakersLog = speakersLogBuffer ? JSON.parse(speakersLogBuffer.toString()).flat() : [];
 
         return {
             audioUrl,
