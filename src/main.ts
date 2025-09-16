@@ -12,7 +12,7 @@ import {
 import Logger from './utils/DatadogLogger'
 import { PathManager } from './utils/PathManager'
 
-import { getErrorMessageFromCode } from './state-machine/types'
+import { BOT_NOT_ACCEPTED_ERROR_CODES, getErrorMessageFromCode } from './state-machine/types'
 import { MeetingParams } from './types'
 
 import { exit } from 'process'
@@ -175,8 +175,12 @@ async function handleFailedRecording(): Promise<void> {
                 Logger.error('Failed to upload logs to S3:', error)
             }
 
-            const transcriptionData = await new TranscriptionProcess().createTranscriptionData()
-            await Events.transcriptionFinished(transcriptionData as TranscriptionFinishedData)
+            if (BOT_NOT_ACCEPTED_ERROR_CODES.includes(GLOBAL.getEndReason())) {
+                Logger.warn('Skipping transcription for error code:', { errorCode: GLOBAL.getEndReason() })
+            } else {
+                const transcriptionData = await new TranscriptionProcess().createTranscriptionData()
+                await Events.transcriptionFinished(transcriptionData as TranscriptionFinishedData)
+            }
         }
         Logger.info('Exiting instance')
         exit(0)

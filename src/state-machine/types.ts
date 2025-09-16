@@ -36,6 +36,17 @@ export enum MeetingEndReason {
     Internal = 'internalError',
 }
 
+export const BOT_NOT_ACCEPTED_ERROR_CODES = [
+    MeetingEndReason.BotNotAccepted,
+    MeetingEndReason.BotRemovedTooEarly,
+    MeetingEndReason.CannotJoinMeeting,
+    MeetingEndReason.TimeoutWaitingToStart,
+    MeetingEndReason.InvalidMeetingUrl,
+    MeetingEndReason.StreamingSetupFailed,
+    MeetingEndReason.LoginRequired,
+    MeetingEndReason.Internal
+]
+
 // Get human-readable error message from error code
 export function getErrorMessageFromCode(errorCode: MeetingEndReason): string {
     switch (errorCode) {

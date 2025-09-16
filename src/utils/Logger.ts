@@ -4,6 +4,7 @@ import winston from 'winston'
 import { GLOBAL } from '../singleton'
 import { PathManager } from './PathManager'
 import { s3cp, S3Uploader } from './S3Uploader'
+import Logger from './DatadogLogger'
 
 // Reference to current bot log file
 let currentBotLogFile: string | null = null
@@ -130,7 +131,8 @@ let logger = winston.createLogger({
 })
 
 export function setupConsoleLogger() {
-    console.log('Setting up console logger')
+    Logger.withFunctionName('setupConsoleLogger')
+    Logger.debug('Setting up console logger')
 
     console.log = (msg: string, ...args: any[]) => {
         currentCaller = getCaller()
@@ -157,7 +159,7 @@ export function setupConsoleLogger() {
         logger.info(formatTable(data))
     }
 
-    console.log('Console logger setup complete')
+    Logger.debug('Console logger setup complete')
 }
 
 export async function uploadLogsToS3(options: {
@@ -183,7 +185,7 @@ export async function uploadLogsToS3(options: {
         const htmlSnapshotsPath = pathManager.getHtmlSnapshotsPath()
         const s3HtmlSnapshotsPath = `${logPath}/html_snapshots/`
 
-        console.log('Looking for internal log files at:', {
+        Logger.debug('Looking for internal log files at:', {
             soundLogPath,
             speakerLogPath,
             screenshotsPath,
@@ -192,11 +194,10 @@ export async function uploadLogsToS3(options: {
 
         // Upload sound log file (internal log file)
         if (fs.existsSync(soundLogPath)) {
-            logger.info(`Uploading sound logs to S3...`)
             await s3cp(soundLogPath, s3SoundLogPath)
-            logger.info(`Sound logs uploaded to S3`)
+            logger.debug(`Sound logs uploaded to S3`)
         } else {
-            console.log('No sound log file found at path:', soundLogPath)
+            Logger.warn('No sound log file found at path:', { soundLogPath })
         }
 
         if (fs.existsSync(speakerLogPath)) {
@@ -204,9 +205,9 @@ export async function uploadLogsToS3(options: {
             await s3cp(speakerLogPath, s3SpeakerLogPath)
             logger.info(`Speaker separation JSON uploaded to S3`)
         } else {
-            console.log(
+            Logger.warn(
                 'No speaker separation JSON file found at path:',
-                speakerLogPath,
+                { speakerLogPath },
             )
         }
 
@@ -214,7 +215,7 @@ export async function uploadLogsToS3(options: {
         if (fs.existsSync(screenshotsPath)) {
             const screenshotFiles = fs.readdirSync(screenshotsPath)
             if (screenshotFiles.length > 0) {
-                logger.info(
+                logger.debug(
                     `Uploading ${screenshotFiles.length} screenshots to S3...`,
                 )
 
@@ -225,7 +226,7 @@ export async function uploadLogsToS3(options: {
                         GLOBAL.get().remote?.aws_s3_log_bucket!,
                         s3ScreenshotsPath,
                     )
-                    logger.info('Screenshots uploaded to S3')
+                    logger.debug('Screenshots uploaded to S3')
                 } catch (error) {
                     logger.error(
                         'Directory sync failed, falling back to individual uploads:',
@@ -240,18 +241,18 @@ export async function uploadLogsToS3(options: {
                         const s3ScreenshotPath = `${s3ScreenshotsPath}${filename}`
                         await s3cp(screenshotPath, s3ScreenshotPath)
                     }
-                    logger.info('Screenshots uploaded to S3 (fallback)')
+                    logger.debug('Screenshots uploaded to S3 (fallback)')
                 }
             } else {
-                console.log(
+                Logger.warn(
                     'Screenshots directory exists but is empty:',
-                    screenshotsPath,
+                    { screenshotsPath },
                 )
             }
         } else {
-            console.log(
+            Logger.warn(
                 'No screenshots directory found at path:',
-                screenshotsPath,
+                { screenshotsPath },
             )
         }
 
@@ -259,7 +260,7 @@ export async function uploadLogsToS3(options: {
         if (fs.existsSync(htmlSnapshotsPath)) {
             const htmlSnapshotFiles = fs.readdirSync(htmlSnapshotsPath)
             if (htmlSnapshotFiles.length > 0) {
-                logger.info(
+                logger.debug(
                     `Uploading ${htmlSnapshotFiles.length} HTML snapshots to S3...`,
                 )
 
@@ -270,7 +271,7 @@ export async function uploadLogsToS3(options: {
                         GLOBAL.get().remote?.aws_s3_log_bucket!,
                         s3HtmlSnapshotsPath,
                     )
-                    logger.info('HTML snapshots uploaded to S3')
+                    logger.debug('HTML snapshots uploaded to S3')
                 } catch (error) {
                     logger.error(
                         'HTML snapshots directory sync failed, falling back to individual uploads:',
@@ -285,18 +286,18 @@ export async function uploadLogsToS3(options: {
                         const s3HtmlSnapshotPath = `${s3HtmlSnapshotsPath}${filename}`
                         await s3cp(htmlSnapshotPath, s3HtmlSnapshotPath)
                     }
-                    logger.info('HTML snapshots uploaded to S3 (fallback)')
+                    logger.debug('HTML snapshots uploaded to S3 (fallback)')
                 }
             } else {
-                console.log(
+                Logger.warn(
                     'HTML snapshots directory exists but is empty:',
-                    htmlSnapshotsPath,
+                    { htmlSnapshotsPath },
                 )
             }
         } else {
-            console.log(
+            Logger.warn(
                 'No HTML snapshots directory found at path:',
-                htmlSnapshotsPath,
+                { htmlSnapshotsPath },
             )
         }
     } catch (error) {
@@ -307,6 +308,7 @@ export async function uploadLogsToS3(options: {
 
 export function setupExitHandler() {
     process.on('uncaughtException', async (error) => {
+        Logger.withFunctionName('uncaughtException')
         logger.error('Uncaught Exception: ' + error)
         if (!GLOBAL.isServerless()) {
             try {
@@ -320,6 +322,7 @@ export function setupExitHandler() {
     })
 
     process.on('unhandledRejection', async (reason, promise) => {
+        Logger.withFunctionName('unhandledRejection')
         logger.error(
             'Unhandled Rejection at: ' + promise + ' reason: ' + reason,
         )

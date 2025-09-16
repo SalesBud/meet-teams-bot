@@ -145,7 +145,7 @@ export class MeetingStateMachine {
                 )
             }
         } catch (error) {
-            Logger.error(
+            Logger.warn(
                 'Error in startRecordMeeting:',
                 { error: error instanceof Error ? error.message : error },
             )

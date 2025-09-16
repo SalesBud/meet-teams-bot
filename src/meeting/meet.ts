@@ -250,7 +250,7 @@ export class MeetProvider implements MeetingProviderInterface {
                 await findShowEveryOne(page, true, cancelCheck)
             }
         } catch (error) {
-            Logger.error('Error in joinMeeting:', {
+            Logger.warn('Error in joinMeeting:', {
                 message: (error as Error).message,
                 stack: (error as Error).stack,
             })

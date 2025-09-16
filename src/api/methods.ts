@@ -59,7 +59,7 @@ export class Api {
             err.response && err.response.data ? err.response.data : err
         const request = err.request
 
-        Logger.info(
+        Logger.debug(
             'Attempt of a new trial #',
             {
                 attempt: cfg && cfg.currentRetryAttempt,
