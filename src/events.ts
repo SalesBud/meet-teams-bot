@@ -9,7 +9,6 @@ export class Events {
 
     static init() {
         if (GLOBAL.get().bot_uuid == null) return
-        if (GLOBAL.get().bots_api_key == null) return
         if (GLOBAL.get().bots_webhook_url == null) return
 
         Events.EVENTS = new Events(

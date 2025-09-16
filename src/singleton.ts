@@ -26,7 +26,7 @@ class Global {
      */
     private normalizeRecordingMode(
         mode: RecordingMode,
-    ): 'speaker_view' | 'gallery_view' | 'audio_only' {
+    ): 'speaker_view' | 'gallery_view' | 'audio_only' | 'fixing_participants' {
         switch (mode) {
             case 'speaker_view':
             case 'SpeakerView':
@@ -37,6 +37,9 @@ class Global {
             case 'audio_only':
             case 'AudioOnly':
                 return 'audio_only'
+            case 'fixing_participants':
+            case 'FixingParticipants':
+                return 'fixing_participants'
             default:
                 // Default to speaker_view if unknown
                 console.warn(

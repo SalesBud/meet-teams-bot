@@ -23,8 +23,18 @@ export class MeetHtmlCleaner {
         )
 
         // Inject Meet provider logic into browser context
-        await this.page.evaluate(async (recordingMode) => {
+        await this.page.evaluate(async (recordingMode: RecordingMode) => {
             async function removeInitialShityHtml(mode: string) {
+
+                if (mode === 'fixing_participants') {
+                    // Add class to hide the bot video
+                    try {
+                        const botVideo = document.querySelectorAll('.aGWPv')[0]
+                        if (botVideo) {
+                            botVideo.parentElement.classList.add('dkjMxf')
+                        }
+                    } catch (e) { }
+                }
                 let div
                 try {
                     document
@@ -101,16 +111,18 @@ export class MeetHtmlCleaner {
                         try {
                             root.parentElement.style.opacity = 0
                             root.parentElement.parentElement.style.opacity = 0
-                            const rootLeft = (Array as any)
-                                .from(document.querySelectorAll('div'))
-                                .find((d) => d.innerText === 'You')
-                            rootLeft.parentElement.parentElement.parentElement.parentElement.style.width =
-                                '97vw'
+                            if (recordingMode !== 'fixing_participants') {
+                                const rootLeft = (Array as any)
+                                    .from(document.querySelectorAll('div'))
+                                    .find((d) => d.innerText === 'You')
+                                rootLeft.parentElement.parentElement.parentElement.parentElement.style.width =
+                                    '97vw'
+                            }
                         } catch (e) {}
                     }
                 }
 
-                if (mode !== 'gallery_view') {
+                if (!['gallery_view', 'fixing_participants'].includes(recordingMode)) {
                     try {
                         const video = document.getElementsByTagName(
                             'video',
@@ -138,38 +150,47 @@ export class MeetHtmlCleaner {
                 }
             }
 
-            function removeShityHtml(mode: string) {
-                if (mode !== 'gallery_view') {
-                    try {
-                        const video = document.getElementsByTagName(
-                            'video',
-                        )[0] as HTMLVideoElement
-                        if (video) {
-                            video.style.position = 'fixed'
-                            video.style.display = 'block'
-                            video.style.left = '0'
-                            video.style.top = '0'
-                            video.style.zIndex = '1'
-                            if (video?.parentElement?.style) {
-                                video.parentElement.style.background = '#000'
-                                video.parentElement.style.top = '0'
-                                video.parentElement.style.left = '0'
-                                video.parentElement.style.width = '100vw'
-                                video.parentElement.style.height = '100vh'
-                                video.parentElement.style.position = 'fixed'
-                                video.parentElement.style.display = 'flex'
-                                video.parentElement.style.alignItems = 'center'
-                                video.parentElement.style.justifyContent =
-                                    'center'
-                            }
-                        }
-                    } catch (e) {}
-                    try {
-                        document.getElementsByTagName(
-                            'video',
-                        )[1].style.position = 'fixed'
-                    } catch (e) {}
+            function configureVideoHtml(mode: string) {
+                if (['gallery_view', 'fixing_participants'].includes(mode)) {
+                    return
                 }
+                try {
+                    const video = document.getElementsByTagName(
+                        'video',
+                    )[0] as HTMLVideoElement
+                    if (video) {
+                        video.style.position = 'fixed'
+                        video.style.display = 'block'
+                        video.style.left = '0'
+                        video.style.top = '0'
+                        video.style.zIndex = '1'
+                        if (video?.parentElement?.style) {
+                            video.parentElement.style.background = '#000'
+                            video.parentElement.style.top = '0'
+                            video.parentElement.style.left = '0'
+                            video.parentElement.style.width = '100vw'
+                            video.parentElement.style.height = '100vh'
+                            video.parentElement.style.position = 'fixed'
+                            video.parentElement.style.display = 'flex'
+                            video.parentElement.style.alignItems = 'center'
+                            video.parentElement.style.justifyContent =
+                                'center'
+                        }
+                    }
+                } catch (e) {
+                    console.error('[VIDEO] Error configuring video HTML:', e)
+                }
+                try {
+                    document.getElementsByTagName(
+                        'video',
+                    )[1].style.position = 'fixed'
+                } catch (e) {
+                    console.error('[VIDEO] Error configuring second video HTML:', e)
+                }
+            }
+
+            function removeShityHtml(mode: string) {
+                configureVideoHtml(mode)
 
                 try {
                     const bannerDiv = document.querySelector(
@@ -226,11 +247,13 @@ export class MeetHtmlCleaner {
                         try {
                             root.parentElement.style.opacity = 0
                             root.parentElement.parentElement.style.opacity = 0
-                            const rootLeft = (Array as any)
-                                .from(document.querySelectorAll('div'))
-                                .find((d) => d.innerText === 'You')
-                            rootLeft.parentElement.parentElement.parentElement.parentElement.style.width =
-                                '97vw'
+                            if (recordingMode !== 'fixing_participants') {
+                                const rootLeft = (Array as any)
+                                    .from(document.querySelectorAll('div'))
+                                    .find((d) => d.innerText === 'You')
+                                    rootLeft.parentElement.parentElement.parentElement.parentElement.style.width =
+                                        '97vw'
+                            }
                         } catch (e) {}
                     }
                 }
@@ -306,6 +329,9 @@ export class MeetHtmlCleaner {
             }
 
             function removeBlackBox(): void {
+                if (recordingMode === 'fixing_participants') {
+                    return
+                }
                 const elements: NodeListOf<HTMLElement> =
                     document.querySelectorAll('[data-layout="roi-crop"]')
                 if (elements.length === 0) {

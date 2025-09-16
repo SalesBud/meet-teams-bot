@@ -702,25 +702,39 @@ async function changeLayout(
             return false
         }
 
-        // 3. Cliquer sur "Spotlight"
-        const spotlightOption = page.locator(
-            [
-                'label:has-text("Spotlight"):has(input[type="radio"])',
-                'label:has(input[name="preferences"]):has-text("Spotlight")',
-                'label:has(span:text-is("Spotlight"))',
-            ].join(','),
-        )
+        // 3. Click in "Sidebar" or "Spotlight"
+        if (GLOBAL.get().recording_mode === 'fixing_participants') {
+            Logger.info('Looking for sidebar option...')
+            const sidebarOption = page.locator(
+                [
+                    'label:has-text("Sidebar"):has(input[type="radio"])',
+                    'label:has(input[name="preferences"]):has-text("Sidebar")',
+                    'label:has(span:text-is("Sidebar"))',
+                ].join(','),
+            )
+            
+            await sidebarOption.waitFor({ state: 'visible', timeout: 3000 })
+            await sidebarOption.click()
+        } else {
+            Logger.info('Looking for Spotlight option...')
+            const spotlightOption = page.locator(
+                [
+                    'label:has-text("Spotlight"):has(input[type="radio"])',
+                    'label:has(input[name="preferences"]):has-text("Spotlight")',
+                    'label:has(span:text-is("Spotlight"))',
+                ].join(','),
+            )
 
-        const count = await spotlightOption.count()
+            await spotlightOption.waitFor({ state: 'visible', timeout: 3000 })
+            await spotlightOption.click()
+        }
 
-        await spotlightOption.waitFor({ state: 'visible', timeout: 3000 })
-        await spotlightOption.click()
         await page.waitForTimeout(500)
 
         // Check one last time if we are still in the meeting
         if (!(await isInMeeting(page))) {
-            Logger.info(
-                'Bot is no longer in the meeting after clicking Spotlight',
+            Logger.warn(
+                'Bot is no longer in the meeting after clicking in change layout',
             )
             return false
         }
