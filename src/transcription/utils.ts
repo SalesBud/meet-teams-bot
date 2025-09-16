@@ -44,10 +44,10 @@ export function countUniqueSpeakers(speakersLog: SpeakerLog[]): SpeakerCount {
         });
 
         const speakers = Array.from(speakingInstances);
-
+        const minSpeakersLength = 1;
         return {
-            minSpeakersExpected: speakers.length,
-            maxSpeakersExpected: allSpeakers.size,
+            minSpeakersExpected: speakers.length == 0 ? minSpeakersLength : speakers.length,
+            maxSpeakersExpected: allSpeakers.size || minSpeakersLength,
             speakers: Array.from(allSpeakers)
         };
     } catch (error) {
