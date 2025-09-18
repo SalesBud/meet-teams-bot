@@ -190,7 +190,7 @@ export class SimpleDialogObserver {
                         continue
                     }
 
-                    Logger.info(
+                    Logger.debug(
                         `[SimpleDialogObserver] Found modal: ${pattern.name}`,
                     )
 
@@ -225,7 +225,7 @@ export class SimpleDialogObserver {
                         detectionMethod: 'simple_google_meet',
                     }
                 } catch (error) {
-                    Logger.warn(
+                    Logger.debug(
                         `[SimpleDialogObserver] Error with pattern ${pattern.name}: ${error}`,
                     )
                 }

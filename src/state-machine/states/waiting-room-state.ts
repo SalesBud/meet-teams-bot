@@ -158,7 +158,7 @@ export class WaitingRoomState extends BaseState {
                     const timeoutError = new Error(
                         'Waiting room timeout reached',
                     )
-                    Logger.error('Waiting room timeout reached', { error: timeoutError })
+                    Logger.info('Waiting room timeout reached', { error: timeoutError })
                     reject(timeoutError)
                 }
             }, timeoutMs)

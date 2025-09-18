@@ -134,7 +134,7 @@ class Global {
             this.errorMessage &&
             this.errorMessage !== getErrorMessageFromCode(reason)
         ) {
-            Logger.warn(
+            Logger.info(
                 `Preserving existing custom error message for ${reason}: "${this.errorMessage}"`,
             )
             return
@@ -142,7 +142,7 @@ class Global {
 
         this.endReason = reason
         this.errorMessage = message || getErrorMessageFromCode(reason)
-        Logger.warn(`End reason set to: ${this.endReason}`)
+        Logger.info(`End reason set to: ${this.endReason}`)
     }
 
     public setEndReason(reason: MeetingEndReason): void {
