@@ -34,7 +34,7 @@ export const DEBUG_LOGS = process.env.DEBUG_LOGS === 'true'
 if (DEBUG_LOGS) {
     import('./browser/page-logger')
         .then(({ enablePrintPageLogs }) => enablePrintPageLogs())
-        .catch((e) => Logger.error('Failed to enable page logs dynamically:', e))
+        .catch((e) => Logger.error('Failed to enable page logs dynamically:', { error: e }))
     Logger.debug('DEBUG mode activated - speakers debug logs will be shown')
 }
 
@@ -56,7 +56,7 @@ async function initializeMeetingParams(): Promise<void> {
         GLOBAL.set(params)
         PathManager.getInstance().initializePaths()
     } catch (error) {
-        Logger.error('Failed to initialize meeting parameters:', error)
+        Logger.error('Failed to initialize meeting parameters:', { error })
         Logger.error('Make sure MEETING_URL and BOT_ID environment variables are set')
         process.exit(1)
     }
@@ -151,7 +151,7 @@ async function handleFailedRecording(): Promise<void> {
         // Handle explicit errors from state machine
         Logger.warn(
             'Meeting failed:',
-            error instanceof Error ? error.message : error,
+            { error: error instanceof Error ? error.message : error },
         )
 
         // Use global error if available, otherwise fallback to error message
@@ -172,7 +172,7 @@ async function handleFailedRecording(): Promise<void> {
             try {
                 await uploadLogsToS3({})
             } catch (error) {
-                Logger.error('Failed to upload logs to S3:', error)
+                Logger.error('Failed to upload logs to S3:', { error })
             }
 
             if (BOT_NOT_ACCEPTED_ERROR_CODES.includes(GLOBAL.getEndReason())) {

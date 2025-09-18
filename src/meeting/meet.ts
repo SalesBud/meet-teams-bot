@@ -374,6 +374,9 @@ async function findShowEveryOne(
         } catch (error) {
             Logger.warn('Error in findShowEveryOne:', { error })
             await sleep(1000)
+            if (error instanceof Error && ['Timeout waiting to start', 'Bot not accepted into meeting'].includes(error.message)) {
+                throw error
+            }
         }
     }
 }
@@ -475,6 +478,7 @@ async function notAcceptedInMeeting(page: Page): Promise<boolean> {
         'we encountered a problem joining',
         "You can't join",
         'You left the meeting', // Happens if the bot first entered in the waiting room of the meeting (not the entry page) and then it was denied entry
+        "You've been removed from the meeting"
     ]
 
     // Google Meet itself has denied entry

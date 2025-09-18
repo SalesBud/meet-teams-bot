@@ -203,7 +203,7 @@ export async function uploadLogsToS3(options: {
         if (fs.existsSync(speakerLogPath)) {
             logger.info(`Uploading speaker separation JSON to S3...`)
             await s3cp(speakerLogPath, s3SpeakerLogPath)
-            logger.info(`Speaker separation JSON uploaded to S3`)
+            logger.debug(`Speaker separation JSON uploaded to S3`)
         } else {
             Logger.warn(
                 'No speaker separation JSON file found at path:',

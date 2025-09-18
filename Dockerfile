@@ -52,7 +52,7 @@ ENV XDG_RUNTIME_DIR=/tmp/pulse
 # Create optimized startup script
 RUN echo '#!/bin/bash\n\
 set -e\n\
-\necho "🖥️ Starting virtual display and audio..."\n\
+\necho "Starting virtual display and audio..."\n\
 export DISPLAY=:99\n\
 export PULSE_RUNTIME_PATH=/tmp/pulse\n\
 export XDG_RUNTIME_DIR=/tmp/pulse\n\
@@ -98,10 +98,10 @@ pactl set-source-latency-offset virtual_speaker.monitor 0 2>/dev/null || true\n\
 pactl set-sink-resample-method virtual_speaker speex-float-10 2>/dev/null || true\n\
 \n# Verify critical audio device exists\n\
 if ! pactl list sources short | grep -q "virtual_speaker.monitor"; then\n\
-    echo "❌ virtual_speaker.monitor not found - audio setup failed"\n\
+    echo "virtual_speaker.monitor not found - audio setup failed"\n\
     exit 1\n\
 fi\n\
-\necho "✅ Virtual display and audio ready"\n\necho "🔍 VNC available at localhost:5900 (password: debug)"\n\n# Start application\ncd /app/\nnode build/src/main.js\n\n# Cleanup on exit\ntrap "kill $PULSE_PID $VNC_PID $XVFB_PID 2>/dev/null || true" EXIT\n' > /start.sh && chmod +x /start.sh
+\n\n# Start application\ncd /app/\nnode build/src/main.js\n\n# Cleanup on exit\ntrap "kill $PULSE_PID $VNC_PID $XVFB_PID 2>/dev/null || true" EXIT\n' > /start.sh && chmod +x /start.sh
 
 # Expose VNC port for debugging
 EXPOSE 5900
